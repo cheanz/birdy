@@ -47,6 +47,91 @@ struct Cluster: Identifiable {
     }
 }
 
+enum Ecosystem {
+    case rainforest, tundra, desert, temperateForest, grassland, wetland, mangrove
+}
+
+struct PixelArtView: View {
+    let ecosystem: Ecosystem
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let cellW = w / 4
+            let cellH = h / 4
+            ZStack {
+                switch ecosystem {
+                case .rainforest:
+                    // dense green
+                    ForEach(0..<4) { r in
+                        ForEach(0..<4) { c in
+                            Rectangle()
+                                .fill(Color.green.opacity(0.6 + Double((r+c) % 2) * 0.2))
+                                .frame(width: cellW, height: cellH)
+                                .position(x: CGFloat(c) * cellW + cellW/2, y: CGFloat(r) * cellH + cellH/2)
+                        }
+                    }
+                case .tundra:
+                    ForEach(0..<4) { r in
+                        ForEach(0..<4) { c in
+                            Rectangle()
+                                .fill(Color.white)
+                                .frame(width: cellW, height: cellH)
+                                .position(x: CGFloat(c) * cellW + cellW/2, y: CGFloat(r) * cellH + cellH/2)
+                        }
+                    }
+                case .desert:
+                    ForEach(0..<4) { r in
+                        ForEach(0..<4) { c in
+                            Rectangle()
+                                .fill(Color.yellow.opacity(0.8))
+                                .frame(width: cellW, height: cellH)
+                                .position(x: CGFloat(c) * cellW + cellW/2, y: CGFloat(r) * cellH + cellH/2)
+                        }
+                    }
+                case .temperateForest:
+                    ForEach(0..<4) { r in
+                        ForEach(0..<4) { c in
+                            Rectangle()
+                                .fill(Color.brown.opacity(0.3 + Double((r+c) % 2) * 0.2))
+                                .frame(width: cellW, height: cellH)
+                                .position(x: CGFloat(c) * cellW + cellW/2, y: CGFloat(r) * cellH + cellH/2)
+                        }
+                    }
+                case .grassland:
+                    ForEach(0..<4) { r in
+                        ForEach(0..<4) { c in
+                            Rectangle()
+                                .fill(Color.green.opacity(0.4))
+                                .frame(width: cellW, height: cellH)
+                                .position(x: CGFloat(c) * cellW + cellW/2, y: CGFloat(r) * cellH + cellH/2)
+                        }
+                    }
+                case .wetland:
+                    ForEach(0..<4) { r in
+                        ForEach(0..<4) { c in
+                            Rectangle()
+                                .fill(Color.blue.opacity(0.6))
+                                .frame(width: cellW, height: cellH)
+                                .position(x: CGFloat(c) * cellW + cellW/2, y: CGFloat(r) * cellH + cellH/2)
+                        }
+                    }
+                case .mangrove:
+                    ForEach(0..<4) { r in
+                        ForEach(0..<4) { c in
+                            Rectangle()
+                                .fill(Color.green.opacity(0.6))
+                                .frame(width: cellW, height: cellH)
+                                .position(x: CGFloat(c) * cellW + cellW/2, y: CGFloat(r) * cellH + cellH/2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 private func clusterAnnotations(from annotations: [BirdAnnotation], thresholdMeters: CLLocationDistance) -> [Cluster] {
     var clusters: [Cluster] = []
     for ann in annotations {
@@ -172,6 +257,26 @@ struct HomeView: View {
     @State private var errorMessage: String?
     @State private var pendingLoadWorkItem: DispatchWorkItem?
     @State private var speciesFrequency: [String: Int] = [:]
+    @State private var showEcosystemName = false
+
+    // Simple heuristic to map coordinates to a terrestrial ecosystem
+    private var currentEcosystem: Ecosystem {
+        let lat = region.center.latitude
+        let absLat = abs(lat)
+        if absLat <= 23.5 {
+            return .rainforest
+        }
+        if absLat >= 60 {
+            return .tundra
+        }
+        if absLat >= 23.5 && absLat < 40 {
+            return .desert
+        }
+        if absLat >= 40 && absLat < 60 {
+            return .temperateForest
+        }
+        return .grassland
+    }
 
     var body: some View {
         NavigationView {
@@ -245,7 +350,16 @@ struct HomeView: View {
                     }
                 }
             }
-            .navigationTitle("Home")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Button(action: { showEcosystemName.toggle() }) {
+                        PixelArtView(ecosystem: currentEcosystem)
+                            .frame(width: 40, height: 40)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
             .alert(item: $errorMessage) { msg in
                 Alert(title: Text("Error"), message: Text(msg), dismissButton: .default(Text("OK")))
             }
