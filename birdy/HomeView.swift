@@ -84,7 +84,7 @@ struct HomeView: View {
                             }
 
                             // optional label (small)
-                            Text(item.speciesName)
+                            Text(item.displayName)
                                 .font(.caption2)
                                 .fixedSize()
                                 .padding(.top, 2)
