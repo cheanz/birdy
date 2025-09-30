@@ -114,6 +114,53 @@ private func packedPositions(forSizes sizes: [CGFloat], padding: CGFloat = 4) ->
     return pts
 }
 
+// Small view to render packed cluster icons — extracted to help the compiler type-check.
+struct ClusterPackedView: View {
+    let entries: [(String, BirdAnnotation)]
+    let sizes: [CGFloat]
+    let offsets: [CGPoint]
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<entries.count, id: \ .self) { idx in
+                let rep = entries[idx].1
+                let size = sizes[idx]
+                let pos = offsets[idx]
+                Group {
+                    if let url = rep.imageURL {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .frame(width: size, height: size)
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: size, height: size)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 1))
+                                    .shadow(radius: 1)
+                            case .failure:
+                                Circle()
+                                    .fill(Color.gray)
+                                    .frame(width: size, height: size)
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
+                    } else {
+                        Circle()
+                            .fill(Color.gray)
+                            .frame(width: size, height: size)
+                    }
+                }
+                .offset(x: pos.x, y: pos.y)
+            }
+        }
+    }
+}
+
 struct HomeView: View {
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
@@ -180,43 +227,9 @@ struct HomeView: View {
                                 let usedSizes = Array(sizes.prefix(top.count))
                                 let offsets = packedPositions(forSizes: usedSizes, padding: 6)
 
-                                ZStack {
-                                    ForEach(Array(top.enumerated()), id: \._0) { idx, entry in
-                                        let (_, rep) = entry
-                                        let size = usedSizes[idx]
-                                        let pos = offsets[idx]
-                                        if let url = rep.imageURL {
-                                            AsyncImage(url: url) { phase in
-                                                switch phase {
-                                                case .empty:
-                                                    ProgressView()
-                                                        .frame(width: size, height: size)
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .scaledToFill()
-                                                        .frame(width: size, height: size)
-                                                        .clipShape(Circle())
-                                                        .overlay(Circle().stroke(Color.white, lineWidth: 1))
-                                                        .shadow(radius: 1)
-                                                        .offset(x: pos.x, y: pos.y)
-                                                case .failure:
-                                                    Circle()
-                                                        .fill(Color.gray)
-                                                        .frame(width: size, height: size)
-                                                        .offset(x: pos.x, y: pos.y)
-                                                @unknown default:
-                                                    EmptyView()
-                                                }
-                                            }
-                                        } else {
-                                            Circle()
-                                                .fill(Color.gray)
-                                                .frame(width: size, height: size)
-                                                .offset(x: pos.x, y: pos.y)
-                                        }
-                                    }
-                                }
+                                let entries = top
+                                let view = ClusterPackedView(entries: entries, sizes: usedSizes, offsets: offsets)
+                                view
                             }
                         }
                         .onTapGesture {
