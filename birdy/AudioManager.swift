@@ -14,9 +14,9 @@ final class AudioManager: ObservableObject {
     /// Create an AudioManager for a bundled audio file.
     /// - Parameters:
     ///   - filename: resource name without extension
-    ///   - fileExtension: file extension, default "mp3"
+    ///   - fileExtension: file extension, default "m4a"
     ///   - autoplay: whether to start playback immediately
-    init(filename: String, fileExtension: String = "mp3", autoplay: Bool = false) {
+    init(filename: String, fileExtension: String = "m4a", autoplay: Bool = false) {
         preparePlayer(filename: filename, fileExtension: fileExtension)
         if autoplay { play() }
     }
