@@ -244,8 +244,25 @@ struct HomeView: View {
                         }
                     }
                 }
+
+                // decorative top border roughly the thickness of the Dynamic Island
+                // non-interactive so it doesn't block map gestures
+                let dynamicIslandHeight: CGFloat = 54
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color(.systemBackground).opacity(0.7), Color(.systemGray4).opacity(0.25)]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(height: dynamicIslandHeight)
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .ignoresSafeArea(edges: .top)
+                    .allowsHitTesting(false)
+                    .shadow(radius: 2)
             }
-            .navigationTitle("Home")
+            .navigationBarHidden(true)
             .alert(item: $errorMessage) { msg in
                 Alert(title: Text("Error"), message: Text(msg), dismissButton: .default(Text("OK")))
             }
