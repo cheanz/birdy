@@ -47,6 +47,30 @@ struct Cluster: Identifiable {
     }
 }
 
+enum Ecosystem {
+    case rainforest, tundra, desert, temperateForest, grassland, wetland, mangrove
+}
+
+// Return a LinearGradient appropriate for each ecosystem.
+private func gradientForEcosystem(_ eco: Ecosystem) -> LinearGradient {
+    switch eco {
+    case .rainforest:
+        return LinearGradient(gradient: Gradient(colors: [Color.green.opacity(0.85), Color.green.opacity(0.55)]), startPoint: .top, endPoint: .bottom)
+    case .tundra:
+        return LinearGradient(gradient: Gradient(colors: [Color(.systemGray6).opacity(0.95), Color.blue.opacity(0.25)]), startPoint: .top, endPoint: .bottom)
+    case .desert:
+        return LinearGradient(gradient: Gradient(colors: [Color.yellow.opacity(0.95), Color.orange.opacity(0.5)]), startPoint: .top, endPoint: .bottom)
+    case .temperateForest:
+        return LinearGradient(gradient: Gradient(colors: [Color.brown.opacity(0.7), Color.green.opacity(0.45)]), startPoint: .top, endPoint: .bottom)
+    case .grassland:
+        return LinearGradient(gradient: Gradient(colors: [Color.green.opacity(0.6), Color.yellow.opacity(0.35)]), startPoint: .top, endPoint: .bottom)
+    case .wetland:
+        return LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.85), Color.green.opacity(0.25)]), startPoint: .top, endPoint: .bottom)
+    case .mangrove:
+        return LinearGradient(gradient: Gradient(colors: [Color.teal.opacity(0.8), Color.green.opacity(0.45)]), startPoint: .top, endPoint: .bottom)
+    }
+}
+
 private func clusterAnnotations(from annotations: [BirdAnnotation], thresholdMeters: CLLocationDistance) -> [Cluster] {
     var clusters: [Cluster] = []
     for ann in annotations {
@@ -173,6 +197,25 @@ struct HomeView: View {
     @State private var pendingLoadWorkItem: DispatchWorkItem?
     @State private var speciesFrequency: [String: Int] = [:]
 
+    // Simple heuristic to map coordinates to a terrestrial ecosystem
+    private var currentEcosystem: Ecosystem {
+        let lat = region.center.latitude
+        let absLat = abs(lat)
+        if absLat <= 23.5 {
+            return .rainforest
+        }
+        if absLat >= 60 {
+            return .tundra
+        }
+        if absLat >= 23.5 && absLat < 40 {
+            return .desert
+        }
+        if absLat >= 40 && absLat < 60 {
+            return .temperateForest
+        }
+        return .grassland
+    }
+
     var body: some View {
         NavigationView {
             ZStack(alignment: .top) {
@@ -246,16 +289,10 @@ struct HomeView: View {
                 }
 
                 // decorative top border roughly the thickness of the Dynamic Island
-                // non-interactive so it doesn't block map gestures
+                // colored by detected ecosystem; non-interactive so it doesn't block map gestures
                 let dynamicIslandHeight: CGFloat = 54
                 Rectangle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color(.systemBackground).opacity(0.7), Color(.systemGray4).opacity(0.25)]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .fill(gradientForEcosystem(currentEcosystem))
                     .frame(height: dynamicIslandHeight)
                     .frame(maxWidth: .infinity, alignment: .top)
                     .ignoresSafeArea(edges: .top)
