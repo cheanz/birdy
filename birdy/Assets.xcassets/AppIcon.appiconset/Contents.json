@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "微信图片_20250930152025_253_5.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "微信图片_20250930194001_269_5.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -23,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "微信图片_20250930194325_270_5.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
