@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct birdyApp: App {
+    @StateObject private var audioManager = AudioManager(filename: "background", autoplay: false)
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(audioManager)
         }
     }
 }

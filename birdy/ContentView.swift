@@ -8,26 +8,34 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var audioManager: AudioManager
+
     var body: some View {
-        TabView {
-            HomeView()
-                .tabItem {
-                    Label("Home", systemImage: "house")
-                }
+        ZStack(alignment: .bottom) {
+            TabView {
+                HomeView()
+                    .tabItem {
+                        Label("Home", systemImage: "house")
+                    }
 
-            SearchView()
-                .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
-                }
+                SearchView()
+                    .tabItem {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
 
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle")
-                }
+                ProfileView()
+                    .tabItem {
+                        Label("Profile", systemImage: "person.crop.circle")
+                    }
+            }
+
+            MusicPlayerView(audio: audioManager)
+                .padding(.bottom, 48)
         }
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AudioManager(filename: "background", autoplay: false))
 }
