@@ -29,9 +29,22 @@
 		DB71F7C52E8A86280076CB03 /* birdyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = birdyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DB71F81C2E8B8B0D0076CB03 /* Exceptions for "birdy" folder in "birdy" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DB71F7AD2E8A86270076CB03 /* birdy */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DB71F7B02E8A86270076CB03 /* birdy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DB71F81C2E8B8B0D0076CB03 /* Exceptions for "birdy" folder in "birdy" target */,
+			);
 			path = birdy;
 			sourceTree = "<group>";
 		};
