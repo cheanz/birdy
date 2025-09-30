@@ -1,43 +1,150 @@
 import SwiftUI
 import MapKit
 
-struct Landmark: Identifiable {
+struct BirdAnnotation: Identifiable {
     let id = UUID()
-    let name: String
+    let speciesName: String
     let coordinate: CLLocationCoordinate2D
+    var imageURL: URL?
 }
 
 struct HomeView: View {
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
-        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
     )
 
-    private let landmarks = [
-        Landmark(name: "Apple Park (example)", coordinate: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902))
-    ]
+    @State private var annotations: [BirdAnnotation] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var pendingLoadWorkItem: DispatchWorkItem?
 
     var body: some View {
         NavigationView {
-            Map(coordinateRegion: $region, annotationItems: landmarks) { landmark in
-                // Simple marker for each landmark
-                MapMarker(coordinate: landmark.coordinate, tint: .red)
+            ZStack(alignment: .top) {
+                Map(coordinateRegion: $region, annotationItems: annotations) { item in
+                    MapAnnotation(coordinate: item.coordinate) {
+                        VStack {
+                            if let url = item.imageURL {
+                                // show wikipedia image as circular thumbnail
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView()
+                                            .frame(width: 48, height: 48)
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 48, height: 48)
+                                            .clipShape(Circle())
+                                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                            .shadow(radius: 2)
+                                    case .failure:
+                                        // fallback marker when image cannot load
+                                        Circle()
+                                            .fill(Color.green)
+                                            .frame(width: 20, height: 20)
+                                    @unknown default:
+                                        EmptyView()
+                                    }
+                                }
+                            } else {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 20, height: 20)
+                            }
+
+                            // optional label (small)
+                            Text(item.speciesName)
+                                .font(.caption2)
+                                .fixedSize()
+                                .padding(.top, 2)
+                        }
+                        .onTapGesture {
+                            // future: show detail sheet
+                        }
+                    }
+                }
             }
             .navigationTitle("Home")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: centerOnFirstLandmark) {
-                        Image(systemName: "location.fill")
+            .alert(item: $errorMessage) { msg in
+                Alert(title: Text("Error"), message: Text(msg), dismissButton: .default(Text("OK")))
+            }
+        }
+        .onAppear {
+            // load birds when view appears
+            scheduleLoadBirds()
+        }
+        .onChange(of: region) { _ in
+            // debounce region changes to avoid rapid API calls while panning/zooming
+            scheduleLoadBirds()
+        }
+    }
+
+    private func loadBirdsInView() {
+        isLoading = true
+        errorMessage = nil
+
+        let center = region.center
+        EbirdClient.fetchRecentObservations(lat: center.latitude, lng: center.longitude, dist: 50, maxResults: 50) { result in
+            switch result {
+            case .failure(let err):
+                DispatchQueue.main.async {
+                    isLoading = false
+                    errorMessage = err.localizedDescription
+                }
+            case .success(let obs):
+                // Map observations to annotations
+                var anns: [BirdAnnotation] = []
+                for o in obs {
+                    if let lat = o.lat, let lng = o.lng {
+                        let name = o.comName ?? o.sciName ?? "Unknown"
+                        let a = BirdAnnotation(speciesName: name, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng), imageURL: nil)
+                        anns.append(a)
+                    }
+                }
+
+                DispatchQueue.main.async {
+                    self.annotations = anns
+                    self.isLoading = false
+                }
+
+                // For each annotation, try to fetch a Wikimedia image URL
+                for (idx, ann) in anns.enumerated() {
+                    WikimediaClient.fetchImageURL(for: ann.speciesName) { res in
+                        switch res {
+                        case .failure:
+                            break
+                        case .success(let url):
+                            DispatchQueue.main.async {
+                                // find the annotation in the array and assign url
+                                if let i = self.annotations.firstIndex(where: { $0.id == ann.id }) {
+                                    self.annotations[i].imageURL = url
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    private func centerOnFirstLandmark() {
-        guard let first = landmarks.first else { return }
-        region.center = first.coordinate
+    private func scheduleLoadBirds(delay: TimeInterval = 0.8) {
+        // cancel existing scheduled work
+        pendingLoadWorkItem?.cancel()
+
+        let work = DispatchWorkItem { [weak self] in
+            self?.loadBirdsInView()
+        }
+        pendingLoadWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
+}
+
+// Simple helper to show alerts using a String as Identifiable
+extension String: Identifiable {
+    public var id: String { self }
 }
 
 #Preview {
