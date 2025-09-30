@@ -26,9 +26,14 @@ extension MKCoordinateRegion: Equatable {
 
 struct BirdAnnotation: Identifiable {
     let id = UUID()
-    let speciesName: String
+    let comName: String?
+    let sciName: String?
     let coordinate: CLLocationCoordinate2D
     var imageURL: URL?
+
+    var displayName: String {
+        return comName ?? sciName ?? "Unknown"
+    }
 }
 
 struct HomeView: View {
@@ -122,8 +127,7 @@ struct HomeView: View {
                 var anns: [BirdAnnotation] = []
                 for o in obs {
                     if let lat = o.lat, let lng = o.lng {
-                        let name = o.comName ?? o.sciName ?? "Unknown"
-                        let a = BirdAnnotation(speciesName: name, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng), imageURL: nil)
+                        let a = BirdAnnotation(comName: o.comName, sciName: o.sciName, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng), imageURL: nil)
                         anns.append(a)
                     }
                 }
@@ -133,19 +137,34 @@ struct HomeView: View {
                     self.isLoading = false
                 }
 
-                // For each annotation, try to fetch a Wikimedia image URL
-                for (idx, ann) in anns.enumerated() {
-                    WikimediaClient.fetchImageURL(for: ann.speciesName) { res in
-                        switch res {
-                        case .failure:
-                            break
-                        case .success(let url):
-                            DispatchQueue.main.async {
-                                // find the annotation in the array and assign url
-                                if let i = self.annotations.firstIndex(where: { $0.id == ann.id }) {
-                                    self.annotations[i].imageURL = url
+                // For each annotation, try to fetch a Wikimedia image URL.
+                // Prefer scientific name (sciName) when available, fall back to common name (comName).
+                for ann in anns {
+                    func assignImage(url: URL) {
+                        DispatchQueue.main.async {
+                            if let i = self.annotations.firstIndex(where: { $0.id == ann.id }) {
+                                self.annotations[i].imageURL = url
+                            }
+                        }
+                    }
+
+                    if let sci = ann.sciName, !sci.isEmpty {
+                        WikimediaClient.fetchImageURL(for: sci) { res in
+                            switch res {
+                            case .success(let url):
+                                assignImage(url: url)
+                            case .failure:
+                                // try common name if scientific lookup failed
+                                if let com = ann.comName, !com.isEmpty {
+                                    WikimediaClient.fetchImageURL(for: com) { res2 in
+                                        if case .success(let url2) = res2 { assignImage(url: url2) }
+                                    }
                                 }
                             }
+                        }
+                    } else if let com = ann.comName, !com.isEmpty {
+                        WikimediaClient.fetchImageURL(for: com) { res in
+                            if case .success(let url) = res { assignImage(url: url) }
                         }
                     }
                 }
