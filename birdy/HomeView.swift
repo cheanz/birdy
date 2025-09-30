@@ -157,8 +157,8 @@ struct HomeView: View {
         // cancel existing scheduled work
         pendingLoadWorkItem?.cancel()
 
-        let work = DispatchWorkItem { [weak self] in
-            self?.loadBirdsInView()
+        let work = DispatchWorkItem {
+            loadBirdsInView()
         }
         pendingLoadWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
