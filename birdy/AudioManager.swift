@@ -248,8 +248,8 @@ final class AudioManager: ObservableObject {
     private func invalidateFadeTimers() {
         fadeTimer?.invalidate()
         fadeTimer = nil
-        scheduledFadeOutTimer?.invalidate()
-        scheduledFadeOutTimer = nil
+        scheduledCrossfadeTimer?.invalidate()
+        scheduledCrossfadeTimer = nil
     }
 
     private func stopTimer() {
