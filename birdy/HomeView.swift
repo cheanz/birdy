@@ -1,5 +1,28 @@
 import SwiftUI
 import MapKit
+import CoreLocation
+
+// Make MKCoordinateRegion equatable for use with SwiftUI's onChange(of:)
+// Use a tolerance-based comparison to avoid noisy updates from tiny floating
+// point changes when the user pans/zooms the map.
+extension MKCoordinateRegion: Equatable {
+    public static func == (lhs: MKCoordinateRegion, rhs: MKCoordinateRegion) -> Bool {
+        // Consider centers equal if they're within this many meters
+        let centerToleranceMeters: CLLocationDistance = 50 // 50 meters
+
+        let lhsLoc = CLLocation(latitude: lhs.center.latitude, longitude: lhs.center.longitude)
+        let rhsLoc = CLLocation(latitude: rhs.center.latitude, longitude: rhs.center.longitude)
+        let centerDistance = lhsLoc.distance(from: rhsLoc)
+        guard centerDistance <= centerToleranceMeters else { return false }
+
+        // For span deltas, use a small epsilon (absolute difference)
+        let spanEpsilon = 0.001
+        if abs(lhs.span.latitudeDelta - rhs.span.latitudeDelta) > spanEpsilon { return false }
+        if abs(lhs.span.longitudeDelta - rhs.span.longitudeDelta) > spanEpsilon { return false }
+
+        return true
+    }
+}
 
 struct BirdAnnotation: Identifiable {
     let id = UUID()
