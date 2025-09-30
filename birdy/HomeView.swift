@@ -123,11 +123,20 @@ struct PixelStripe: View {
 private func patternForEcosystem(_ eco: Ecosystem) -> [[Color]] {
     switch eco {
     case .rainforest:
+        // 8x8 tile: canopy with trunk in center columns
+        let gDark = Color.green.opacity(0.95)
+        let gMid = Color.green.opacity(0.8)
+        let gLight = Color.green.opacity(0.6)
+        let trunk = Color.brown.opacity(0.95)
         return [
-            [Color.green.opacity(0.95), Color.green.opacity(0.8), Color.green.opacity(0.6), Color.green.opacity(0.9)],
-            [Color.green.opacity(0.6), Color.green.opacity(0.9), Color.green.opacity(0.8), Color.green.opacity(0.6)],
-            [Color.green.opacity(0.8), Color.green.opacity(0.6), Color.green.opacity(0.95), Color.green.opacity(0.8)],
-            [Color.green.opacity(0.9), Color.green.opacity(0.7), Color.green.opacity(0.6), Color.green.opacity(0.95)]
+            [gMid, gDark, gDark, gDark, gDark, gDark, gDark, gMid],
+            [gDark, gDark, gMid, gMid, gMid, gMid, gDark, gDark],
+            [gMid, gLight, gMid, gMid, gMid, gMid, gLight, gMid],
+            [gLight, gMid, gLight, trunk, trunk, gLight, gMid, gLight],
+            [gLight, gMid, gLight, trunk, trunk, gLight, gMid, gLight],
+            [gMid, gLight, gMid, gMid, gMid, gMid, gLight, gMid],
+            [gDark, gMid, gDark, gMid, gMid, gDark, gMid, gDark],
+            [gMid, gDark, gMid, gDark, gDark, gMid, gDark, gMid]
         ]
     case .tundra:
         return [
