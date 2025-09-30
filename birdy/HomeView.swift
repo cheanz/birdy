@@ -71,6 +71,106 @@ private func gradientForEcosystem(_ eco: Ecosystem) -> LinearGradient {
     }
 }
 
+// Programmatic pixel tile (rows x cols grid). Lightweight and vector-based.
+struct PixelArtTile: View {
+    let pixels: [[Color]]
+    let pixelSpacing: CGFloat
+
+    var body: some View {
+        GeometryReader { geo in
+            let rows = pixels.count
+            let cols = pixels.first?.count ?? 0
+            guard rows > 0 && cols > 0 else { EmptyView(); return }
+            let cellW = geo.size.width / CGFloat(cols)
+            let cellH = geo.size.height / CGFloat(rows)
+            ZStack {
+                ForEach(0..<rows, id: \.self) { r in
+                    ForEach(0..<cols, id: \.self) { c in
+                        pixels[r][c]
+                            .frame(width: cellW - pixelSpacing, height: cellH - pixelSpacing)
+                            .position(x: CGFloat(c) * cellW + cellW / 2, y: CGFloat(r) * cellH + cellH / 2)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Tile a PixelArtTile horizontally to fill the stripe width.
+struct PixelStripe: View {
+    let pixels: [[Color]]
+    let tileSize: CGSize
+    let pixelSpacing: CGFloat
+
+    var body: some View {
+        GeometryReader { geo in
+            let count = max(1, Int(ceil(geo.size.width / tileSize.width)))
+            HStack(spacing: 0) {
+                ForEach(0..<count, id: \.self) { _ in
+                    PixelArtTile(pixels: pixels, pixelSpacing: pixelSpacing)
+                        .frame(width: tileSize.width, height: tileSize.height)
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+}
+
+// Example 4x4 patterns for ecosystems. Tweak colors as you like.
+private func patternForEcosystem(_ eco: Ecosystem) -> [[Color]] {
+    switch eco {
+    case .rainforest:
+        return [
+            [Color.green.opacity(0.95), Color.green.opacity(0.8), Color.green.opacity(0.6), Color.green.opacity(0.9)],
+            [Color.green.opacity(0.6), Color.green.opacity(0.9), Color.green.opacity(0.8), Color.green.opacity(0.6)],
+            [Color.green.opacity(0.8), Color.green.opacity(0.6), Color.green.opacity(0.95), Color.green.opacity(0.8)],
+            [Color.green.opacity(0.9), Color.green.opacity(0.7), Color.green.opacity(0.6), Color.green.opacity(0.95)]
+        ]
+    case .tundra:
+        return [
+            [Color.white, Color(.systemGray6), Color.white, Color.blue.opacity(0.12)],
+            [Color(.systemGray6), Color.white, Color.blue.opacity(0.08), Color.white],
+            [Color.white, Color.blue.opacity(0.1), Color(.systemGray6), Color.white],
+            [Color.blue.opacity(0.12), Color.white, Color(.systemGray6), Color.white]
+        ]
+    case .desert:
+        return [
+            [Color.yellow.opacity(0.98), Color.orange.opacity(0.9), Color.yellow.opacity(0.95), Color.orange.opacity(0.85)],
+            [Color.orange.opacity(0.8), Color.yellow.opacity(0.95), Color.orange.opacity(0.7), Color.yellow.opacity(0.9)],
+            [Color.yellow.opacity(0.95), Color.orange.opacity(0.85), Color.yellow.opacity(0.9), Color.orange.opacity(0.8)],
+            [Color.orange.opacity(0.75), Color.yellow.opacity(0.95), Color.orange.opacity(0.85), Color.yellow.opacity(0.9)]
+        ]
+    case .temperateForest:
+        return [
+            [Color.brown.opacity(0.8), Color.green.opacity(0.55), Color.brown.opacity(0.7), Color.green.opacity(0.45)],
+            [Color.green.opacity(0.5), Color.brown.opacity(0.7), Color.green.opacity(0.6), Color.brown.opacity(0.6)],
+            [Color.brown.opacity(0.7), Color.green.opacity(0.55), Color.brown.opacity(0.8), Color.green.opacity(0.5)],
+            [Color.green.opacity(0.6), Color.brown.opacity(0.65), Color.green.opacity(0.5), Color.brown.opacity(0.7)]
+        ]
+    case .grassland:
+        return [
+            [Color.green.opacity(0.7), Color.yellow.opacity(0.35), Color.green.opacity(0.6), Color.yellow.opacity(0.4)],
+            [Color.yellow.opacity(0.4), Color.green.opacity(0.65), Color.yellow.opacity(0.35), Color.green.opacity(0.6)],
+            [Color.green.opacity(0.65), Color.yellow.opacity(0.35), Color.green.opacity(0.7), Color.yellow.opacity(0.35)],
+            [Color.yellow.opacity(0.4), Color.green.opacity(0.6), Color.yellow.opacity(0.35), Color.green.opacity(0.65)]
+        ]
+    case .wetland:
+        return [
+            [Color.blue.opacity(0.9), Color.green.opacity(0.3), Color.blue.opacity(0.8), Color.green.opacity(0.25)],
+            [Color.green.opacity(0.25), Color.blue.opacity(0.85), Color.green.opacity(0.3), Color.blue.opacity(0.8)],
+            [Color.blue.opacity(0.85), Color.green.opacity(0.28), Color.blue.opacity(0.9), Color.green.opacity(0.3)],
+            [Color.green.opacity(0.3), Color.blue.opacity(0.8), Color.green.opacity(0.25), Color.blue.opacity(0.85)]
+        ]
+    case .mangrove:
+        return [
+            [Color.teal.opacity(0.9), Color.green.opacity(0.45), Color.teal.opacity(0.8), Color.green.opacity(0.4)],
+            [Color.green.opacity(0.4), Color.teal.opacity(0.85), Color.green.opacity(0.45), Color.teal.opacity(0.8)],
+            [Color.teal.opacity(0.85), Color.green.opacity(0.42), Color.teal.opacity(0.9), Color.green.opacity(0.45)],
+            [Color.green.opacity(0.45), Color.teal.opacity(0.8), Color.green.opacity(0.4), Color.teal.opacity(0.85)]
+        ]
+    }
+}
+
 private func clusterAnnotations(from annotations: [BirdAnnotation], thresholdMeters: CLLocationDistance) -> [Cluster] {
     var clusters: [Cluster] = []
     for ann in annotations {
@@ -288,11 +388,9 @@ struct HomeView: View {
                     }
                 }
 
-                // decorative top border roughly the thickness of the Dynamic Island
-                // colored by detected ecosystem; non-interactive so it doesn't block map gestures
+                // decorative top border (tiled pixel-art) roughly the thickness of the Dynamic Island
                 let dynamicIslandHeight: CGFloat = 54
-                Rectangle()
-                    .fill(gradientForEcosystem(currentEcosystem))
+                PixelStripe(pixels: patternForEcosystem(currentEcosystem), tileSize: CGSize(width: 54, height: dynamicIslandHeight - 8), pixelSpacing: 1)
                     .frame(height: dynamicIslandHeight)
                     .frame(maxWidth: .infinity, alignment: .top)
                     .ignoresSafeArea(edges: .top)
