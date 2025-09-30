@@ -80,15 +80,18 @@ struct PixelArtTile: View {
         GeometryReader { geo in
             let rows = pixels.count
             let cols = pixels.first?.count ?? 0
-            guard rows > 0 && cols > 0 else { EmptyView(); return }
-            let cellW = geo.size.width / CGFloat(cols)
-            let cellH = geo.size.height / CGFloat(rows)
-            ZStack {
-                ForEach(0..<rows, id: \.self) { r in
-                    ForEach(0..<cols, id: \.self) { c in
-                        pixels[r][c]
-                            .frame(width: cellW - pixelSpacing, height: cellH - pixelSpacing)
-                            .position(x: CGFloat(c) * cellW + cellW / 2, y: CGFloat(r) * cellH + cellH / 2)
+            if rows == 0 || cols == 0 {
+                EmptyView()
+            } else {
+                let cellW = geo.size.width / CGFloat(cols)
+                let cellH = geo.size.height / CGFloat(rows)
+                ZStack {
+                    ForEach(0..<rows, id: \.self) { r in
+                        ForEach(0..<cols, id: \.self) { c in
+                            pixels[r][c]
+                                .frame(width: cellW - pixelSpacing, height: cellH - pixelSpacing)
+                                .position(x: CGFloat(c) * cellW + cellW / 2, y: CGFloat(r) * cellH + cellH / 2)
+                        }
                     }
                 }
             }
