@@ -6,5 +6,7 @@
 	<string>te0vn0tungqt</string>
 	<key>REVENUECAT_API_KEY</key>
 	<string>appl_USUvmLvlMTJwZgOzFfYhxpykLmv</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to show nearby bird observations and center the map on your position.</string>
 </dict>
 </plist>

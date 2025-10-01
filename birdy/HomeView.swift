@@ -1,11 +1,13 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import UIKit
 
 // Lightweight location provider to request permission and publish the last known coordinate.
 final class LocationProvider: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     @Published var lastLocation: CLLocationCoordinate2D?
+    @Published var authorizationStatus: CLAuthorizationStatus = CLLocationManager.authorizationStatus()
 
     override init() {
         super.init()
@@ -33,6 +35,9 @@ final class LocationProvider: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        DispatchQueue.main.async {
+            self.authorizationStatus = manager.authorizationStatus
+        }
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             manager.requestLocation()
@@ -449,6 +454,59 @@ struct HomeView: View {
                     .ignoresSafeArea(edges: .top)
                     .allowsHitTesting(false)
                     .shadow(radius: 2)
+            }
+            // In-app explanation / permission card
+            if locationProvider.authorizationStatus == .notDetermined {
+                VStack(spacing: 12) {
+                    Text("Enable Location")
+                        .font(.headline)
+                    Text("Allow location access so we can show nearby bird observations and center the map on your position.")
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                    HStack(spacing: 12) {
+                        Button("Not now") {
+                            // dismiss by setting a non-notDetermined state is not available; just do nothing and let system handle
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(.systemGray6)))
+
+                        Button("Allow") {
+                            locationProvider.requestPermission()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.blue))
+                        .foregroundColor(.white)
+                    }
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemBackground)).shadow(radius: 6))
+                .padding(.horizontal, 24)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            } else if locationProvider.authorizationStatus == .denied {
+                VStack(spacing: 8) {
+                    Text("Location Disabled")
+                        .font(.headline)
+                    Text("Location access is disabled. Open Settings to enable location for this app.")
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.blue))
+                    .foregroundColor(.white)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemBackground)).shadow(radius: 6))
+                .padding(.horizontal, 24)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
             .navigationBarHidden(true)
             .alert(item: $errorMessage) { msg in
