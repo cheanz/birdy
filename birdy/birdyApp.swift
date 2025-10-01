@@ -6,12 +6,19 @@
 //
 
 import SwiftUI
+import Purchases
 
 @main
 struct birdyApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     @StateObject private var audioManager = AudioManager(filename: "background", fileExtension: "m4a", autoplay: false, loop: true, fadeInDuration: 2.0, fadeOutDuration: 2.0)
+
+    init() {
+        // Configure RevenueCat with your public API key. Replace the placeholder below
+        // with your RevenueCat public API key (not a secret key).
+        Purchases.configure(withAPIKey: "REVENUECAT_PUBLIC_KEY_PLACEHOLDER")
+    }
 
     var body: some Scene {
         WindowGroup {
