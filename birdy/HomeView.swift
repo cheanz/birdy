@@ -489,11 +489,22 @@ struct HomeView: View {
                     .ignoresSafeArea(edges: .top)
                     .allowsHitTesting(false)
                     .shadow(radius: 2)
-                // Filter control (top-right)
+                // Top overlays: search (center) and filter picker (right)
+                // Picker (top-right)
                 HStack {
                     Spacer()
-                    // Search field (top-center)
+                    Picker("Filter", selection: $filterMode) {
+                        ForEach(FilterMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 140)
+                    .padding(.trailing, 12)
+                    .padding(.top, dynamicIslandHeight + 8)
                 }
+
+                // Search field + results (top-center)
                 VStack {
                     HStack(spacing: 8) {
                         TextField("Search bird name…", text: $searchText, onCommit: {
@@ -513,10 +524,7 @@ struct HomeView: View {
                         ScrollView(.vertical) {
                             VStack(spacing: 0) {
                                 ForEach(searchResults) { r in
-                                    Button(action: {
-                                        // center on selected result
-                                        goToAnnotation(r)
-                                    }) {
+                                    Button(action: { goToAnnotation(r) }) {
                                         HStack {
                                             Text(r.displayName)
                                                 .foregroundColor(.primary)
@@ -532,16 +540,6 @@ struct HomeView: View {
                         .cornerRadius(8)
                         .padding(.horizontal, 24)
                     }
-                }
-                    Picker("Filter", selection: $filterMode) {
-                        ForEach(FilterMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 140)
-                    .padding(.trailing, 12)
-                    .padding(.top, dynamicIslandHeight + 8)
                 }
                 // Debug overlay (bottom-left) — shows counts to help diagnose disappearing icons
                 VStack {
