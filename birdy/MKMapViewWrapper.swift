@@ -52,7 +52,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
                     view.configure(with: existingAnn)
                 } else if let view = uiView.view(for: existingAnn) {
                     // fallback for generic annotation views
-                    parent.coordinator.configureAnnotationView(view, for: existingAnn)
+                    context.coordinator.configureAnnotationView(view, for: existingAnn)
                 }
             }
         }
