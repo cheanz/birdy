@@ -22,11 +22,23 @@ struct MKMapViewWrapper: UIViewRepresentable {
 
         // sync annotations
         let existing = uiView.annotations.filter { !($0 is MKUserLocation) }
-        let toRemove = existing.filter { a in !annotations.contains(where: { $0 === a }) }
-        uiView.removeAnnotations(toRemove)
 
-        let toAdd = annotations.filter { a in !existing.contains(where: { $0 === a }) }
-        uiView.addAnnotations(toAdd)
+        // stable key for annotations: use BirdMKAnnotation.id when available, otherwise pointer identity
+        func key(for ann: MKAnnotation) -> String {
+            if let b = ann as? BirdMKAnnotation { return "bird:\(b.id.uuidString)" }
+            // fallback to pointer identity
+            let ptr = Unmanaged.passUnretained(ann as AnyObject).toOpaque()
+            return "obj:\(ptr)"
+        }
+
+        let existingKeys = Set(existing.map { key(for: $0) })
+        let newKeys = Set(annotations.map { key(for: $0) })
+
+        let toRemove = existing.filter { !newKeys.contains(key(for: $0)) }
+        if !toRemove.isEmpty { uiView.removeAnnotations(toRemove) }
+
+        let toAdd = annotations.filter { !existingKeys.contains(key(for: $0)) }
+        if !toAdd.isEmpty { uiView.addAnnotations(toAdd) }
 
         // overlays
         uiView.removeOverlays(uiView.overlays)
