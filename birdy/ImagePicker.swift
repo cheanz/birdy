@@ -28,7 +28,9 @@ struct ImagePicker: UIViewControllerRepresentable {
                 item.itemProvider.loadObject(ofClass: UIImage.self) { (obj, error) in
                     DispatchQueue.main.async {
                         if let ui = obj as? UIImage {
-                            self.parent.image = ui
+                            // Resize to max 512px to keep payload small and rendering consistent
+                            let resized = ui.resizeKeepingAspect(maxSide: 512)
+                            self.parent.image = resized
                         }
                     }
                 }
