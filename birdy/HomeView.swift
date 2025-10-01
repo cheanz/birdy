@@ -2,6 +2,46 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
+// Lightweight location provider to request permission and publish the last known coordinate.
+final class LocationProvider: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    @Published var lastLocation: CLLocationCoordinate2D?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+    }
+
+    func requestPermission() {
+        manager.requestWhenInUseAuthorization()
+    }
+
+    func requestLocation() {
+        manager.requestLocation()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let loc = locations.first else { return }
+        DispatchQueue.main.async {
+            self.lastLocation = loc.coordinate
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // ignore for now
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.requestLocation()
+        default:
+            break
+        }
+    }
+}
+
 // Make MKCoordinateRegion equatable for use with SwiftUI's onChange(of:)
 // Use a tolerance-based comparison to avoid noisy updates from tiny floating
 // point changes when the user pans/zooms the map.
@@ -308,6 +348,7 @@ struct HomeView: View {
     @State private var errorMessage: String?
     @State private var pendingLoadWorkItem: DispatchWorkItem?
     @State private var speciesFrequency: [String: Int] = [:]
+    @StateObject private var locationProvider = LocationProvider()
 
     // Simple heuristic to map coordinates to a terrestrial ecosystem
     private var currentEcosystem: Ecosystem {
@@ -334,7 +375,7 @@ struct HomeView: View {
                 // cluster annotations for visual grouping and render cluster icons
                 let clusters = clusterAnnotations(from: annotations, thresholdMeters: 50)
 
-                Map(coordinateRegion: $region, annotationItems: clusters) { cluster in
+                Map(coordinateRegion: $region, showsUserLocation: true, annotationItems: clusters) { cluster in
                     MapAnnotation(coordinate: cluster.coordinate) {
                         VStack {
                             if cluster.members.count == 1 {
@@ -417,6 +458,7 @@ struct HomeView: View {
         .onAppear {
             // load birds when view appears
             scheduleLoadBirds()
+            locationProvider.requestPermission() // request location permission so the map can show the blue dot
         }
         .onChange(of: region) { _ in
             // debounce region changes to avoid rapid API calls while panning/zooming
