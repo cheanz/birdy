@@ -354,6 +354,14 @@ struct HomeView: View {
     @State private var pendingLoadWorkItem: DispatchWorkItem?
     @State private var speciesFrequency: [String: Int] = [:]
     @StateObject private var locationProvider = LocationProvider()
+    @State private var filterMode: FilterMode = .all
+
+    enum FilterMode: String, CaseIterable, Identifiable {
+        case all = "All"
+        case rareSingles = "Rare"
+
+        var id: String { rawValue }
+    }
 
     // Simple heuristic to map coordinates to a terrestrial ecosystem
     private var currentEcosystem: Ecosystem {
@@ -378,7 +386,25 @@ struct HomeView: View {
         NavigationView {
             ZStack(alignment: .top) {
                 // cluster annotations for visual grouping and render cluster icons
-                let clusters = clusterAnnotations(from: annotations, thresholdMeters: 50)
+                let allClusters = clusterAnnotations(from: annotations, thresholdMeters: 50)
+                // Apply filter layers
+                let clusters: [Cluster] = {
+                    switch filterMode {
+                    case .all:
+                        return allClusters
+                    case .rareSingles:
+                        // compute global species frequency and find the minimum frequency
+                        let globalCounts = speciesFrequency
+                        guard !globalCounts.isEmpty else { return [] }
+                        let minFreq = globalCounts.values.min() ?? 0
+                        // keep clusters that are single-member and whose species frequency == minFreq
+                        return allClusters.filter { c in
+                            if c.members.count != 1 { return false }
+                            let key = (c.members[0].sciName ?? c.members[0].comName ?? "").lowercased()
+                            return (globalCounts[key] ?? Int.max) == minFreq
+                        }
+                    }
+                }()
 
                 Map(coordinateRegion: $region, showsUserLocation: true, annotationItems: clusters) { cluster in
                     MapAnnotation(coordinate: cluster.coordinate) {
@@ -454,6 +480,19 @@ struct HomeView: View {
                     .ignoresSafeArea(edges: .top)
                     .allowsHitTesting(false)
                     .shadow(radius: 2)
+                // Filter control (top-right)
+                HStack {
+                    Spacer()
+                    Picker("Filter", selection: $filterMode) {
+                        ForEach(FilterMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 140)
+                    .padding(.trailing, 12)
+                    .padding(.top, dynamicIslandHeight + 8)
+                }
             }
             // In-app explanation / permission card
             if locationProvider.authorizationStatus == .notDetermined {
