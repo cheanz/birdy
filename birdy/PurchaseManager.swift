@@ -49,17 +49,21 @@ final class PurchaseManager: ObservableObject {
 
         let result = try await Purchases.shared.purchase(package: package)
 
+        // Defensive check: if the SDK returned a result with no transaction, treat this as
+        // a cancelled or otherwise incomplete purchase and do not credit the user.
+        // (RevenueCat typically throws on cancellation, but being explicit avoids
+        // accidental crediting if behavior differs in local StoreKit testing.)
+        if result.transaction == nil {
+            return 0
+        }
+
         // on successful purchase, credit the local counter in UserDefaults and return amount
-        // `result.customerInfo` is non-optional when purchase completes successfully, so
-        // treat this as confirmation and credit the mapped amount.
-    let pid = package.storeProduct.productIdentifier
-    let priceValue = NSDecimalNumber(decimal: package.storeProduct.price as Decimal).doubleValue
-    let creditsToAdd = productCredits[pid] ?? Int(round(priceValue * Double(creditsPerDollar)))
+        let pid = package.storeProduct.productIdentifier
+        let priceValue = NSDecimalNumber(decimal: package.storeProduct.price as Decimal).doubleValue
+        let creditsToAdd = productCredits[pid] ?? Int(round(priceValue * Double(creditsPerDollar)))
         let key = "birdy_local_credits"
         let current = UserDefaults.standard.integer(forKey: key)
         UserDefaults.standard.set(current + creditsToAdd, forKey: key)
         return creditsToAdd
-
-        return 0
     }
 }
