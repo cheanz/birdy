@@ -1,4 +1,5 @@
 import SwiftUI
+import RevenueCat
 
 struct ProfileView: View {
     // simple local credit counter persisted in UserDefaults
@@ -54,44 +55,9 @@ struct ProfileView: View {
                         Text("No offerings available")
                             .foregroundColor(.secondary)
                     } else {
-                        ForEach(purchases.packages, id: \ .identifier) { pkg in
-                            let pid = pkg.storeProduct.productIdentifier
-                            let creditAmount = purchases.productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: pkg.storeProduct.price as Decimal).doubleValue * 10.0))
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("\(creditAmount) credits")
-                                        .bold()
-                                    Text(pkg.storeProduct.localizedTitle)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Button(action: {
-                                    Task {
-                                        isProcessing = true
-                                        do {
-                                            let added = try await purchases.purchase(pkg)
-                                            if added > 0 {
-                                                toastText = "Added \(added) credits"
-                                                showToast = true
-                                                // auto-hide after 2 seconds
-                                                Task {
-                                                    try await Task.sleep(nanoseconds: 2_000_000_000)
-                                                    await MainActor.run { showToast = false }
-                                                }
-                                            }
-                                        } catch {
-                                            alertMessage = error.localizedDescription
-                                        }
-                                        isProcessing = false
-                                    }
-                                }) {
-                                    Text(pkg.storeProduct.priceLocale.currencySymbol ?? "")
-                                        + Text(String(format: "%.2f", NSDecimalNumber(decimal: pkg.storeProduct.price as Decimal).doubleValue))
-                                }
-                                .disabled(isProcessing || purchases.isPurchasing)
-                            }
-                            .padding(.vertical, 6)
+                        ForEach(purchases.packages, id: \.identifier) { pkg in
+                            packageRow(pkg)
+                                .padding(.vertical, 6)
                         }
                     }
                 }
@@ -118,9 +84,54 @@ struct ProfileView: View {
                 }
                 , alignment: .top
             )
-            .alert(item: Binding(get: { alertMessage == nil ? nil : "msg" }, set: { _ in alertMessage = nil })) {
-                Alert(title: Text("Purchase"), message: Text(alertMessage ?? ""), dismissButton: .default(Text("OK")))
+            .alert("Purchase", isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } })) {
+                Button("OK", role: .cancel) { alertMessage = nil }
+            } message: {
+                Text(alertMessage ?? "")
             }
+        }
+    }
+
+    @ViewBuilder
+    private func packageRow(_ pkg: RevenueCat.Package) -> some View {
+        // compute commonly used values in small, typed steps to help the compiler
+        let pid = pkg.storeProduct.productIdentifier
+        let priceValue = NSDecimalNumber(decimal: pkg.storeProduct.price as Decimal).doubleValue
+        let creditAmount = purchases.productCredits[pid] ?? Int(round(priceValue * 10.0))
+
+        HStack {
+            VStack(alignment: .leading) {
+                Text("\(creditAmount) credits")
+                    .bold()
+                Text(pkg.storeProduct.localizedTitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Button(action: {
+                Task {
+                    isProcessing = true
+                    do {
+                        let added = try await purchases.purchase(pkg)
+                        if added > 0 {
+                            toastText = "Added \(added) credits"
+                            showToast = true
+                            // auto-hide after 2 seconds
+                            Task {
+                                try await Task.sleep(nanoseconds: 2_000_000_000)
+                                await MainActor.run { showToast = false }
+                            }
+                        }
+                    } catch {
+                        alertMessage = error.localizedDescription
+                    }
+                    isProcessing = false
+                }
+            }) {
+                Text(pkg.storeProduct.priceLocale.currencySymbol ?? "")
+                    + Text(String(format: "%.2f", priceValue))
+            }
+            .disabled(isProcessing || purchases.isPurchasing)
         }
     }
 }
