@@ -44,14 +44,14 @@ final class PurchaseManager: ObservableObject {
         let result = try await Purchases.shared.purchase(package: package)
 
         // on successful purchase, credit the local counter in UserDefaults and return amount
-        if let _ = result.customerInfo {
-            let pid = package.product.productIdentifier
-            let creditsToAdd = productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: package.product.price as Decimal).doubleValue * 10.0))
-            let key = "birdy_local_credits"
-            let current = UserDefaults.standard.integer(forKey: key)
-            UserDefaults.standard.set(current + creditsToAdd, forKey: key)
-            return creditsToAdd
-        }
+        // `result.customerInfo` is non-optional when purchase completes successfully, so
+        // treat this as confirmation and credit the mapped amount.
+        let pid = package.product.productIdentifier
+        let creditsToAdd = productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: package.product.price as Decimal).doubleValue * 10.0))
+        let key = "birdy_local_credits"
+        let current = UserDefaults.standard.integer(forKey: key)
+        UserDefaults.standard.set(current + creditsToAdd, forKey: key)
+        return creditsToAdd
 
         return 0
     }
