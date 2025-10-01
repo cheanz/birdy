@@ -447,13 +447,16 @@ struct HomeView: View {
                     }
                 }
 
-                // Build polyline overlay if route coords exist
-                var overlays: [MKOverlay] = []
-                if let coords = currentRouteCoords, coords.count >= 2 {
-                    let pts = coords.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-                    let poly = MKPolyline(coordinates: pts, count: pts.count)
-                    overlays.append(poly)
-                }
+                // Build polyline overlay if route coords exist (use computed let so it's allowed inside ViewBuilder)
+                let overlays: [MKOverlay] = {
+                    var arr: [MKOverlay] = []
+                    if let coords = currentRouteCoords, coords.count >= 2 {
+                        let pts = coords.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                        let poly = MKPolyline(coordinates: pts, count: pts.count)
+                        arr.append(poly)
+                    }
+                    return arr
+                }()
 
                 MKMapViewWrapper(region: $region, annotations: mkAnnotations, overlays: overlays)
                 // route rendering is handled by building `displayAnnotations` passed into the Map above
