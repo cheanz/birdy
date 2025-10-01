@@ -647,6 +647,31 @@ struct HomeView: View {
             // debounce region changes to avoid rapid API calls while panning/zooming
             scheduleLoadBirds()
         }
+        .onChange(of: routesStore.selectedRouteID) { id in
+            guard let id = id, let saved = routesStore.savedRoutes.first(where: { $0.id == id }) else {
+                // clear route if nothing selected
+                self.currentRouteCoords = nil
+                return
+            }
+            let coords = saved.coordinates
+            guard !coords.isEmpty else { return }
+            // set current route coords so overlay is drawn
+            withAnimation {
+                self.currentRouteCoords = coords
+                // compute bounding box
+                let lats = coords.map { $0.latitude }
+                let lons = coords.map { $0.longitude }
+                let minLat = lats.min() ?? coords[0].latitude
+                let maxLat = lats.max() ?? coords[0].latitude
+                let minLon = lons.min() ?? coords[0].longitude
+                let maxLon = lons.max() ?? coords[0].longitude
+                let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2.0, longitude: (minLon + maxLon) / 2.0)
+                // add padding
+                let latDelta = max(0.01, (maxLat - minLat) * 1.4)
+                let lonDelta = max(0.01, (maxLon - minLon) * 1.4)
+                self.region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta))
+            }
+        }
     }
 
     // MARK: - Routing & Persistence
