@@ -1,5 +1,5 @@
 import Foundation
-import Purchases
+import RevenueCat
 import SwiftUI
 
 // Simple manager for one-time purchases (credits) with local credit persistence

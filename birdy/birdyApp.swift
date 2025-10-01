@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import Purchases
+import RevenueCat
 
 @main
 struct birdyApp: App {
@@ -17,7 +17,7 @@ struct birdyApp: App {
     init() {
         // Configure RevenueCat with your public API key. Replace the placeholder below
         // with your RevenueCat public API key (not a secret key).
-        Purchases.configure(withAPIKey: "REVENUECAT_PUBLIC_KEY_PLACEHOLDER")
+        Purchases.configure(withAPIKey: "appl_USUvmLvlMTJwZgOzFfYhxpykLmv")
     }
 
     var body: some Scene {
