@@ -6,10 +6,12 @@ import SwiftUI
 final class PurchaseManager: ObservableObject {
     static let shared = PurchaseManager()
 
-    // Map product identifiers to credit amounts. Update these to match your products.
+    // Map product identifiers to credit amounts. Update these to match your App Store Connect product IDs.
+    // NOTE: I used the repository owner "cheanz" to form example product IDs below. Replace these
+    // with the exact product identifiers you create in App Store Connect (or your StoreKit config).
     let productCredits: [String: Int] = [
-        "com.yourdomain.birdy.10credits": 10,
-        "com.yourdomain.birdy.100credits": 100
+        "com.cheanz.birdy.10credits": 10,
+        "com.cheanz.birdy.100credits": 100
     ]
 
     // Conversion rate used when a product id is not mapped explicitly:
