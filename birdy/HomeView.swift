@@ -489,10 +489,51 @@ struct HomeView: View {
                     .ignoresSafeArea(edges: .top)
                     .allowsHitTesting(false)
                     .shadow(radius: 2)
-                // Top overlays: search (center) and filter picker (right)
-                // Picker (top-right)
-                HStack {
+                // Top overlays: combined search (center) and filter picker (right)
+                HStack(alignment: .top, spacing: 12) {
+                    Spacer(minLength: 12)
+
+                    // Centered search area. Constrain width so it won't collide with the picker on small screens.
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            TextField("Search bird name…", text: $searchText, onCommit: {
+                                performSearch()
+                            })
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 320)
+
+                            Button(action: { performSearch() }) {
+                                Image(systemName: "magnifyingglass")
+                                    .padding(8)
+                            }
+                        }
+
+                        if showResults {
+                            ScrollView(.vertical) {
+                                VStack(spacing: 0) {
+                                    ForEach(searchResults) { r in
+                                        Button(action: { goToAnnotation(r) }) {
+                                            HStack {
+                                                Text(r.displayName)
+                                                    .foregroundColor(.primary)
+                                                Spacer()
+                                            }
+                                            .padding(8)
+                                        }
+                                        .background(Color(.systemBackground).opacity(0.95))
+                                    }
+                                }
+                            }
+                            .frame(maxHeight: 220)
+                            .cornerRadius(8)
+                            .shadow(radius: 2)
+                        }
+                    }
+                    .frame(minWidth: 0, maxWidth: 420)
+
                     Spacer()
+
+                    // Picker (top-right)
                     Picker("Filter", selection: $filterMode) {
                         ForEach(FilterMode.allCases) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -501,46 +542,8 @@ struct HomeView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 140)
                     .padding(.trailing, 12)
-                    .padding(.top, dynamicIslandHeight + 8)
                 }
-
-                // Search field + results (top-center)
-                VStack {
-                    HStack(spacing: 8) {
-                        TextField("Search bird name…", text: $searchText, onCommit: {
-                            performSearch()
-                        })
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 280)
-
-                        Button(action: { performSearch() }) {
-                            Image(systemName: "magnifyingglass")
-                                .padding(8)
-                        }
-                    }
-                    .padding(.top, dynamicIslandHeight + 8)
-
-                    if showResults {
-                        ScrollView(.vertical) {
-                            VStack(spacing: 0) {
-                                ForEach(searchResults) { r in
-                                    Button(action: { goToAnnotation(r) }) {
-                                        HStack {
-                                            Text(r.displayName)
-                                                .foregroundColor(.primary)
-                                            Spacer()
-                                        }
-                                        .padding(8)
-                                    }
-                                    .background(Color(.systemBackground).opacity(0.95))
-                                }
-                            }
-                        }
-                        .frame(maxHeight: 220)
-                        .cornerRadius(8)
-                        .padding(.horizontal, 24)
-                    }
-                }
+                .padding(.top, dynamicIslandHeight + 8)
                 // Debug overlay (bottom-left) — shows counts to help diagnose disappearing icons
                 VStack {
                     Spacer()
