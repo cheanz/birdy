@@ -355,6 +355,10 @@ struct HomeView: View {
     @State private var speciesFrequency: [String: Int] = [:]
     @StateObject private var locationProvider = LocationProvider()
     @State private var filterMode: FilterMode = .all
+    @State private var searchText: String = ""
+    @State private var searchResults: [BirdAnnotation] = []
+    @State private var showResults: Bool = false
+    @State private var selectedAnnotationID: UUID? = nil
 
     enum FilterMode: String, CaseIterable, Identifiable {
         case all = "All"
@@ -488,6 +492,47 @@ struct HomeView: View {
                 // Filter control (top-right)
                 HStack {
                     Spacer()
+                    // Search field (top-center)
+                }
+                VStack {
+                    HStack(spacing: 8) {
+                        TextField("Search bird name…", text: $searchText, onCommit: {
+                            performSearch()
+                        })
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 280)
+
+                        Button(action: { performSearch() }) {
+                            Image(systemName: "magnifyingglass")
+                                .padding(8)
+                        }
+                    }
+                    .padding(.top, dynamicIslandHeight + 8)
+
+                    if showResults {
+                        ScrollView(.vertical) {
+                            VStack(spacing: 0) {
+                                ForEach(searchResults) { r in
+                                    Button(action: {
+                                        // center on selected result
+                                        goToAnnotation(r)
+                                    }) {
+                                        HStack {
+                                            Text(r.displayName)
+                                                .foregroundColor(.primary)
+                                            Spacer()
+                                        }
+                                        .padding(8)
+                                    }
+                                    .background(Color(.systemBackground).opacity(0.95))
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 220)
+                        .cornerRadius(8)
+                        .padding(.horizontal, 24)
+                    }
+                }
                     Picker("Filter", selection: $filterMode) {
                         ForEach(FilterMode.allCases) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -616,6 +661,32 @@ struct HomeView: View {
             // debounce region changes to avoid rapid API calls while panning/zooming
             scheduleLoadBirds()
         }
+    }
+
+    private func performSearch() {
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else {
+            searchResults = []
+            showResults = false
+            return
+        }
+        // match against common and scientific names
+        let matches = annotations.filter { ann in
+            let name = (ann.comName ?? ann.sciName ?? "").lowercased()
+            return name.contains(q)
+        }
+        searchResults = matches
+        showResults = !matches.isEmpty
+    }
+
+    private func goToAnnotation(_ ann: BirdAnnotation) {
+        withAnimation {
+            region.center = ann.coordinate
+            region.span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+        }
+        // optionally, use user location to find a nearby occurrence if multiple exist — for now center on the annotation
+        showResults = false
+        selectedAnnotationID = ann.id
     }
 
     private func loadBirdsInView() {
