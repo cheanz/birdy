@@ -1,5 +1,6 @@
 import SwiftUI
 
+
 struct ProfileView: View {
     @StateObject private var purchases = PurchaseManager.shared
     @State private var showAlert = false

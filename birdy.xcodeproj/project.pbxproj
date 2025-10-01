@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DB71FA752E8CB2D50076CB03 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = DB71FA742E8CB2D50076CB03 /* RevenueCat */; };
+		DB71FA772E8CB2D50076CB03 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = DB71FA762E8CB2D50076CB03 /* RevenueCatUI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		DB71F7BC2E8A86280076CB03 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,6 +70,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DB71FA772E8CB2D50076CB03 /* RevenueCatUI in Frameworks */,
+				DB71FA752E8CB2D50076CB03 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +132,8 @@
 			);
 			name = birdy;
 			packageProductDependencies = (
+				DB71FA742E8CB2D50076CB03 /* RevenueCat */,
+				DB71FA762E8CB2D50076CB03 /* RevenueCatUI */,
 			);
 			productName = birdy;
 			productReference = DB71F7AE2E8A86270076CB03 /* birdy.app */;
@@ -587,6 +596,19 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DB71FA742E8CB2D50076CB03 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DB71FA492E8CAA680076CB03 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		DB71FA762E8CB2D50076CB03 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DB71FA492E8CAA680076CB03 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCatUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DB71F7A62E8A86270076CB03 /* Project object */;
 }
