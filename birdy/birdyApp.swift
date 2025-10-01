@@ -12,7 +12,7 @@ import RevenueCat
 struct birdyApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
-    @StateObject private var audioManager = AudioManager(filename: "background", fileExtension: "m4a", autoplay: false, loop: true, fadeInDuration: 2.0, fadeOutDuration: 2.0)
+    @StateObject private var audioManager = AudioManager(filename: "background", fileExtension: "m4a", autoplay: false, loop: true, pauseBetweenLoops: 2.0, fadeInDuration: 2.0, fadeOutDuration: 2.0)
 
     init() {
         // Configure RevenueCat if API key is present in Info.plist under REVENUECAT_API_KEY

@@ -14,10 +14,12 @@ final class AudioManager: ObservableObject {
     private var timer: Timer?
     private var fadeTimer: Timer?
     private var scheduledCrossfadeTimer: Timer?
+    private var scheduledLoopTimer: Timer?
 
     private var fadeInDuration: TimeInterval
     private var fadeOutDuration: TimeInterval
     private let loop: Bool
+    private let pauseBetweenLoops: TimeInterval
     private var fileURL: URL?
     private var dipVolume: Float = 0.2
 
@@ -33,11 +35,13 @@ final class AudioManager: ObservableObject {
          fileExtension: String = "m4a",
          autoplay: Bool = false,
          loop: Bool = false,
+         pauseBetweenLoops: TimeInterval = 0,
          fadeInDuration: TimeInterval = 0,
          fadeOutDuration: TimeInterval = 0) {
         self.fadeInDuration = fadeInDuration
         self.fadeOutDuration = fadeOutDuration
         self.loop = loop
+        self.pauseBetweenLoops = pauseBetweenLoops
 
         preparePlayers(filename: filename, fileExtension: fileExtension)
         if autoplay { play() }
@@ -96,11 +100,18 @@ final class AudioManager: ObservableObject {
             startFadeIn(for: playerA)
         }
 
-        // If looping requested, schedule crossfades repeatedly
+        // If looping requested, either schedule crossfades (for seamless) or schedule a pause between loops
         scheduledCrossfadeTimer?.invalidate()
         scheduledCrossfadeTimer = nil
-        if loop && fadeOutDuration > 0 {
-            scheduleCrossfade(for: playerA)
+        scheduledLoopTimer?.invalidate()
+        scheduledLoopTimer = nil
+        if loop {
+            if pauseBetweenLoops > 0 {
+                // schedule end-of-track handler that will pause for pauseBetweenLoops, then restart
+                scheduleLoopEnd(for: playerA)
+            } else if fadeOutDuration > 0 {
+                scheduleCrossfade(for: playerA)
+            }
         }
     }
 
@@ -217,6 +228,56 @@ final class AudioManager: ObservableObject {
         }
     }
 
+    private func scheduleLoopEnd(for currentPlayer: AVAudioPlayer) {
+        scheduledLoopTimer?.invalidate()
+        scheduledLoopTimer = nil
+
+        let remaining = max(0, currentPlayer.duration - currentPlayer.currentTime)
+        scheduledLoopTimer = Timer.scheduledTimer(withTimeInterval: remaining, repeats: false) { [weak self] _ in
+            self?.performLoopPause()
+        }
+    }
+
+    private func performLoopPause() {
+        // Stop both players and schedule resume after pauseBetweenLoops
+        playerA?.stop()
+        playerB?.stop()
+        isPlaying = false
+        stopTimer()
+
+        scheduledLoopTimer?.invalidate()
+        scheduledLoopTimer = Timer.scheduledTimer(withTimeInterval: pauseBetweenLoops, repeats: false) { [weak self] _ in
+            self?.restartAfterPause()
+        }
+    }
+
+    private func restartAfterPause() {
+        scheduledLoopTimer?.invalidate()
+        scheduledLoopTimer = nil
+
+        // Reset both players and start playback again
+        playerA?.currentTime = 0
+        playerB?.currentTime = 0
+        activeIsA = true
+        playerA?.volume = (fadeInDuration > 0) ? 0 : 1.0
+        playerB?.volume = (fadeInDuration > 0) ? 0 : 1.0
+        playerA?.play()
+        isPlaying = true
+        startTimer()
+        if fadeInDuration > 0 {
+            startFadeIn(for: playerA!)
+        }
+
+        // Schedule next loop end
+        if let ap = playerA, loop {
+            if pauseBetweenLoops > 0 {
+                scheduleLoopEnd(for: ap)
+            } else if fadeOutDuration > 0 {
+                scheduleCrossfade(for: ap)
+            }
+        }
+    }
+
     private func performCrossfade() {
         guard let pA = playerA, let pB = playerB else { return }
 
@@ -250,11 +311,15 @@ final class AudioManager: ObservableObject {
         fadeTimer = nil
         scheduledCrossfadeTimer?.invalidate()
         scheduledCrossfadeTimer = nil
+        scheduledLoopTimer?.invalidate()
+        scheduledLoopTimer = nil
     }
 
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+        scheduledLoopTimer?.invalidate()
+        scheduledLoopTimer = nil
     }
 
     deinit {
