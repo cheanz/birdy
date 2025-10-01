@@ -386,7 +386,12 @@ struct HomeView: View {
         NavigationView {
             ZStack(alignment: .top) {
                 // cluster annotations for visual grouping and render cluster icons
-                let allClusters = clusterAnnotations(from: annotations, thresholdMeters: 50)
+                // adapt threshold based on zoom level: one degree latitude ~111km
+                let metersPerLatDegree = 111_000.0
+                let visibleMeters = region.span.latitudeDelta * metersPerLatDegree
+                // use a small fraction of visible height as clustering radius; clamp to [8, 2000]
+                let adaptiveThreshold = max(8.0, min(2000.0, visibleMeters * 0.001))
+                let allClusters = clusterAnnotations(from: annotations, thresholdMeters: adaptiveThreshold)
                 // Apply filter layers
                 let clusters: [Cluster] = {
                     switch filterMode {
@@ -492,6 +497,29 @@ struct HomeView: View {
                     .frame(width: 140)
                     .padding(.trailing, 12)
                     .padding(.top, dynamicIslandHeight + 8)
+                }
+                // Debug overlay (bottom-left) — shows counts to help diagnose disappearing icons
+                VStack {
+                    Spacer()
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("anns: \(annotations.count)")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                            Text("clusters: \(allClusters.count)")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                            Text(String(format: "thresh: %.0f m", adaptiveThreshold))
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                        }
+                        .padding(8)
+                        .background(Color.black.opacity(0.6))
+                        .cornerRadius(8)
+                        .padding(.leading, 12)
+                        .padding(.bottom, 12)
+                        Spacer()
+                    }
                 }
             }
             // In-app explanation / permission card
