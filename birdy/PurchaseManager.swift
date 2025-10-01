@@ -12,6 +12,10 @@ final class PurchaseManager: ObservableObject {
         "com.yourdomain.birdy.100credits": 100
     ]
 
+    // Conversion rate used when a product id is not mapped explicitly:
+    // 1 dollar (USD) -> creditsPerDollar credits
+    let creditsPerDollar: Int = 10
+
     @Published var packages: [Package] = []
     @Published var isLoading: Bool = false
     @Published var isPurchasing: Bool = false
@@ -47,7 +51,8 @@ final class PurchaseManager: ObservableObject {
         // `result.customerInfo` is non-optional when purchase completes successfully, so
         // treat this as confirmation and credit the mapped amount.
     let pid = package.storeProduct.productIdentifier
-    let creditsToAdd = productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: package.storeProduct.price as Decimal).doubleValue * 10.0))
+    let priceValue = NSDecimalNumber(decimal: package.storeProduct.price as Decimal).doubleValue
+    let creditsToAdd = productCredits[pid] ?? Int(round(priceValue * Double(creditsPerDollar)))
         let key = "birdy_local_credits"
         let current = UserDefaults.standard.integer(forKey: key)
         UserDefaults.standard.set(current + creditsToAdd, forKey: key)

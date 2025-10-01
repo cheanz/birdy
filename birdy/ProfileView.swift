@@ -97,7 +97,7 @@ struct ProfileView: View {
         // compute commonly used values in small, typed steps to help the compiler
         let pid = pkg.storeProduct.productIdentifier
         let priceValue = NSDecimalNumber(decimal: pkg.storeProduct.price as Decimal).doubleValue
-        let creditAmount = purchases.productCredits[pid] ?? Int(round(priceValue * 10.0))
+    let creditAmount = purchases.productCredits[pid] ?? Int(round(priceValue * Double(purchases.creditsPerDollar)))
 
         HStack {
             VStack(alignment: .leading) {
