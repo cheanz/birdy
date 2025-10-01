@@ -438,12 +438,9 @@ struct HomeView: View {
                 }()
 
                 // Build MKAnnotation objects for clusters and route dots
-                let mkAnnotations: [MKPointAnnotation] = displayAnnotations.flatMap { cluster in
+                let mkAnnotations: [BirdMKAnnotation] = displayAnnotations.flatMap { cluster in
                     cluster.members.map { m in
-                        let a = MKPointAnnotation()
-                        a.coordinate = m.coordinate
-                        a.title = m.displayName
-                        return a
+                        BirdMKAnnotation(id: m.id, coordinate: m.coordinate, title: m.displayName, imageURL: m.imageURL, isRoutePoint: m.isRoutePoint)
                     }
                 }
 
