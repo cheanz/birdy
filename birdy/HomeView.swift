@@ -75,10 +75,40 @@ struct BirdAnnotation: Identifiable {
     let sciName: String?
     let coordinate: CLLocationCoordinate2D
     var imageURL: URL?
+    var isRoutePoint: Bool = false
 
     var displayName: String {
         return comName ?? sciName ?? "Unknown"
     }
+}
+
+// Codable wrapper for storing coordinates in UserDefaults
+private struct CodableCoordinate: Codable {
+    let lat: Double
+    let lon: Double
+
+    init(_ c: CLLocationCoordinate2D) {
+        lat = c.latitude
+        lon = c.longitude
+    }
+
+    var clLocationCoordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
+}
+
+private struct SavedRoute: Codable, Identifiable {
+    let id: UUID
+    let name: String
+    let coords: [CodableCoordinate]
+    let date: Date
+
+    init(name: String, coords: [CLLocationCoordinate2D]) {
+        self.id = UUID()
+        self.name = name
+        self.coords = coords.map { CodableCoordinate($0) }
+        self.date = Date()
+    }
+
+    var coordinates: [CLLocationCoordinate2D] { coords.map { $0.clLocationCoordinate } }
 }
 
 struct Cluster: Identifiable {
@@ -359,6 +389,13 @@ struct HomeView: View {
     @State private var searchResults: [BirdAnnotation] = []
     @State private var showResults: Bool = false
     @State private var selectedAnnotationID: UUID? = nil
+    @State private var currentRouteCoords: [CLLocationCoordinate2D]? = nil
+    @State private var savedRoutes: [SavedRoute] = {
+        if let data = UserDefaults.standard.data(forKey: "birdy_saved_routes") {
+            if let routes = try? JSONDecoder().decode([SavedRoute].self, from: data) { return routes }
+        }
+        return []
+    }()
 
     enum FilterMode: String, CaseIterable, Identifiable {
         case all = "All"
@@ -481,6 +518,21 @@ struct HomeView: View {
                     }
                 }
 
+                // If we have an active route, also show its endpoints as annotations by merging them into the displayed clusters.
+                // We append them after the main clusters so they render on top.
+                let displayClusters: [Cluster] = {
+                    var list = clusters
+                    if let coords = currentRouteCoords, coords.count >= 2 {
+                        // start
+                        let startAnn = BirdAnnotation(comName: "Start", sciName: nil, coordinate: coords.first!, imageURL: nil, isRoutePoint: true)
+                        // end
+                        let endAnn = BirdAnnotation(comName: "End", sciName: nil, coordinate: coords.last!, imageURL: nil, isRoutePoint: true)
+                        list.append(Cluster(members: [startAnn]))
+                        list.append(Cluster(members: [endAnn]))
+                    }
+                    return list
+                }()
+
                 // decorative top border (tiled pixel-art) roughly the thickness of the Dynamic Island
                 let dynamicIslandHeight: CGFloat = 54
                 PixelStripe(pixels: patternForEcosystem(currentEcosystem), tileSize: CGSize(width: 54, height: dynamicIslandHeight - 8), pixelSpacing: 1)
@@ -512,15 +564,28 @@ struct HomeView: View {
                             ScrollView(.vertical) {
                                 VStack(spacing: 0) {
                                     ForEach(searchResults) { r in
-                                        Button(action: { goToAnnotation(r) }) {
-                                            HStack {
-                                                Text(r.displayName)
-                                                    .foregroundColor(.primary)
-                                                Spacer()
+                                        HStack {
+                                            Button(action: { goToAnnotation(r) }) {
+                                                HStack {
+                                                    Text(r.displayName)
+                                                        .foregroundColor(.primary)
+                                                    Spacer()
+                                                }
+                                                .padding(8)
                                             }
-                                            .padding(8)
+                                            .background(Color(.systemBackground).opacity(0.95))
+
+                                            // Route button: compute directions from user location to this annotation
+                                            Button(action: {
+                                                requestRoute(to: r)
+                                            }) {
+                                                Image(systemName: "car.fill")
+                                                    .padding(8)
+                                                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.blue))
+                                                    .foregroundColor(.white)
+                                            }
+                                            .padding(.leading, 6)
                                         }
-                                        .background(Color(.systemBackground).opacity(0.95))
                                     }
                                 }
                             }
@@ -663,6 +728,50 @@ struct HomeView: View {
             scheduleLoadBirds()
         }
     }
+
+    // MARK: - Routing & Persistence
+
+    private func requestRoute(to ann: BirdAnnotation) {
+        // If we have a last known location, use it; otherwise request one and bail for now.
+        guard let fromCoord = locationProvider.lastLocation else {
+            locationProvider.requestLocation()
+            // Optionally inform the user to try again after location is available
+            return
+        }
+
+        computeDirections(from: fromCoord, to: ann.coordinate) { coords in
+            guard let coords = coords, coords.count > 1 else { return }
+            DispatchQueue.main.async {
+                self.currentRouteCoords = coords
+                // Save route with a simple name
+                let name = ann.displayName
+                let saved = SavedRoute(name: name, coords: coords)
+                self.savedRoutes.append(saved)
+                if let data = try? JSONEncoder().encode(self.savedRoutes) {
+                    UserDefaults.standard.set(data, forKey: "birdy_saved_routes")
+                }
+            }
+        }
+    }
+
+    private func computeDirections(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D, completion: @escaping ([CLLocationCoordinate2D]?) -> Void) {
+        let request = MKDirections.Request()
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: from))
+        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: to))
+        request.transportType = .automobile
+        request.requestsAlternateRoutes = false
+
+        let dirs = MKDirections(request: request)
+        dirs.calculate { resp, err in
+            if let route = resp?.routes.first {
+                let coords = route.polyline.coordinates()
+                completion(coords)
+            } else {
+                completion(nil)
+            }
+        }
+    }
+
 
     private func performSearch() {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -809,6 +918,15 @@ struct HomeView: View {
 // Simple helper to show alerts using a String as Identifiable
 extension String: Identifiable {
     public var id: String { self }
+}
+
+// MKPolyline coordinate extractor
+extension MKPolyline {
+    func coordinates() -> [CLLocationCoordinate2D] {
+        var coords = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid, count: Int(self.pointCount))
+        self.getCoordinates(&coords, range: NSRange(location: 0, length: self.pointCount))
+        return coords
+    }
 }
 
 #Preview {
