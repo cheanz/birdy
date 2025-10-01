@@ -34,6 +34,29 @@ struct MKMapViewWrapper: UIViewRepresentable {
         let existingKeys = Set(existing.map { key(for: $0) })
         let newKeys = Set(annotations.map { key(for: $0) })
 
+        // Build maps for updating existing annotations in place
+        var existingMap: [String: MKAnnotation] = [:]
+        for e in existing { existingMap[key(for: e)] = e }
+        var newMap: [String: MKAnnotation] = [:]
+        for n in annotations { newMap[key(for: n)] = n }
+
+        // Update properties of existing BirdMKAnnotation instances from new data (title, imageURL)
+        let intersection = existingKeys.intersection(newKeys)
+        for k in intersection {
+            if let existingAnn = existingMap[k] as? BirdMKAnnotation, let newAnn = newMap[k] as? BirdMKAnnotation {
+                // copy mutable properties
+                existingAnn.title = newAnn.title
+                existingAnn.imageURL = newAnn.imageURL
+                // refresh view if visible
+                if let view = uiView.view(for: existingAnn) as? BirdAnnotationView {
+                    view.configure(with: existingAnn)
+                } else if let view = uiView.view(for: existingAnn) {
+                    // fallback for generic annotation views
+                    parent.coordinator.configureAnnotationView(view, for: existingAnn)
+                }
+            }
+        }
+
         let toRemove = existing.filter { !newKeys.contains(key(for: $0)) }
         if !toRemove.isEmpty { uiView.removeAnnotations(toRemove) }
 
