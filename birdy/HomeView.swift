@@ -390,12 +390,7 @@ struct HomeView: View {
     @State private var showResults: Bool = false
     @State private var selectedAnnotationID: UUID? = nil
     @State private var currentRouteCoords: [CLLocationCoordinate2D]? = nil
-    @State private var savedRoutes: [SavedRoute] = {
-        if let data = UserDefaults.standard.data(forKey: "birdy_saved_routes") {
-            if let routes = try? JSONDecoder().decode([SavedRoute].self, from: data) { return routes }
-        }
-        return []
-    }()
+    @EnvironmentObject var routesStore: RoutesStore
 
     enum FilterMode: String, CaseIterable, Identifiable {
         case all = "All"
@@ -517,21 +512,37 @@ struct HomeView: View {
                         }
                     }
                 }
-
-                // If we have an active route, also show its endpoints as annotations by merging them into the displayed clusters.
-                // We append them after the main clusters so they render on top.
-                let displayClusters: [Cluster] = {
-                    var list = clusters
-                    if let coords = currentRouteCoords, coords.count >= 2 {
-                        // start
-                        let startAnn = BirdAnnotation(comName: "Start", sciName: nil, coordinate: coords.first!, imageURL: nil, isRoutePoint: true)
-                        // end
-                        let endAnn = BirdAnnotation(comName: "End", sciName: nil, coordinate: coords.last!, imageURL: nil, isRoutePoint: true)
-                        list.append(Cluster(members: [startAnn]))
-                        list.append(Cluster(members: [endAnn]))
+                // If we have an active route, also show its endpoints and overlay.
+                if let coords = currentRouteCoords, coords.count >= 2 {
+                    // MapOverlay / polyline rendering (iOS 16+ Map supports MapPolyline) - if not available,
+                    // we'll also render small point annotations as a fallback.
+#if canImport(MapKit)
+                    // Use MapAnnotation for endpoints
+                    MapAnnotation(coordinate: coords.first!) {
+                        VStack {
+                            Image(systemName: "circle.fill")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                        }
                     }
-                    return list
-                }()
+                    MapAnnotation(coordinate: coords.last!) {
+                        VStack {
+                            Image(systemName: "flag.fill")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                        }
+                    }
+#endif
+                    // Draw polyline by converting coordinates into an MKPolyline overlay rendered as many small MapAnnotations
+                    // (SwiftUI Map lacks a direct polyline overlay API pre-iOS 16 in some versions, so this is a safe fallback)
+                    ForEach(Array(coords.enumerated()), id: \ .offset) { _, c in
+                        MapAnnotation(coordinate: c) {
+                            Circle()
+                                .fill(Color.blue.opacity(0.9))
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                }
 
                 // decorative top border (tiled pixel-art) roughly the thickness of the Dynamic Island
                 let dynamicIslandHeight: CGFloat = 54
@@ -743,13 +754,9 @@ struct HomeView: View {
             guard let coords = coords, coords.count > 1 else { return }
             DispatchQueue.main.async {
                 self.currentRouteCoords = coords
-                // Save route with a simple name
+                // Save route with a simple name into the shared store
                 let name = ann.displayName
-                let saved = SavedRoute(name: name, coords: coords)
-                self.savedRoutes.append(saved)
-                if let data = try? JSONEncoder().encode(self.savedRoutes) {
-                    UserDefaults.standard.set(data, forKey: "birdy_saved_routes")
-                }
+                routesStore.addRoute(name: name, coords: coords)
             }
         }
     }
