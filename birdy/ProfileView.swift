@@ -1,7 +1,7 @@
 import SwiftUI
 import RevenueCat
 
-struct StoreView: View {
+struct ProfileView: View {
     @State private var offerings: Offerings?
     @State private var credits: Int = UserDefaults.standard.integer(forKey: "credits")
     @State private var message: String?

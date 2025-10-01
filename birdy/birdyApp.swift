@@ -15,6 +15,7 @@ struct birdyApp: App {
     @StateObject private var audioManager = AudioManager(filename: "background", fileExtension: "wav", autoplay: false, loop: true, pauseBetweenLoops: 2.0, fadeInDuration: 2.0, fadeOutDuration: 2.0)
 
     init() {
+        Purchases.logLevel = .debug
         // Configure RevenueCat if API key is present in Info.plist under REVENUECAT_API_KEY
         if let key = Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String, !key.isEmpty {
             Purchases.configure(withAPIKey: key)
