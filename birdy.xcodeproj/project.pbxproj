@@ -208,6 +208,9 @@
 			);
 			mainGroup = DB71F7A52E8A86270076CB03;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DB71FA492E8CAA680076CB03 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DB71F7AF2E8A86270076CB03 /* Products */;
 			projectDirPath = "";
@@ -573,6 +576,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DB71FA492E8CAA680076CB03 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.40.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = DB71F7A62E8A86270076CB03 /* Project object */;
 }
