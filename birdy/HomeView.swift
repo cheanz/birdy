@@ -508,38 +508,38 @@ struct HomeView: View {
                 .padding(.horizontal, 24)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
-            .navigationBarHidden(true)
-            .alert(item: $errorMessage) { msg in
-                Alert(title: Text("Error"), message: Text(msg), dismissButton: .default(Text("OK")))
-            }
-            // Floating center-on-me button
-            .overlay(
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            if let coord = locationProvider.lastLocation {
-                                withAnimation {
-                                    region.center = coord
-                                    region.span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                                }
-                            } else {
-                                // request a fresh location if we don't have one yet
-                                locationProvider.requestLocation()
-                            }
-                        }) {
-                            Image(systemName: "location.fill")
-                                .foregroundColor(.white)
-                                .padding(14)
-                                .background(Circle().fill(Color.blue))
-                                .shadow(radius: 4)
-                        }
-                        .padding()
-                    }
-                }
-            )
         }
+        .navigationBarHidden(true)
+        .alert(item: $errorMessage) { msg in
+            Alert(title: Text("Error"), message: Text(msg), dismissButton: .default(Text("OK")))
+        }
+        // Floating center-on-me button
+        .overlay(
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        if let coord = locationProvider.lastLocation {
+                            withAnimation {
+                                region.center = coord
+                                region.span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                            }
+                        } else {
+                            // request a fresh location if we don't have one yet
+                            locationProvider.requestLocation()
+                        }
+                    }) {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(.white)
+                            .padding(14)
+                            .background(Circle().fill(Color.blue))
+                            .shadow(radius: 4)
+                    }
+                    .padding()
+                }
+            }
+        )
         .onAppear {
             // load birds when view appears
             scheduleLoadBirds()
