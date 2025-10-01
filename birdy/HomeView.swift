@@ -424,15 +424,10 @@ struct HomeView: View {
                 let displayAnnotations: [Cluster] = {
                     var list = clusters
                     if let coords = currentRouteCoords, coords.count >= 2 {
-                        let startAnn = BirdAnnotation(comName: "Start", sciName: nil, coordinate: coords.first!, imageURL: nil, isRoutePoint: true)
-                        let endAnn = BirdAnnotation(comName: "End", sciName: nil, coordinate: coords.last!, imageURL: nil, isRoutePoint: true)
-                        list.append(Cluster(members: [startAnn]))
-                        list.append(Cluster(members: [endAnn]))
-                        // polyline dots
-                        for c in coords {
-                            let dot = BirdAnnotation(comName: nil, sciName: nil, coordinate: c, imageURL: nil, isRoutePoint: true)
-                            list.append(Cluster(members: [dot]))
-                        }
+                            let startAnn = BirdAnnotation(comName: "Start", sciName: nil, coordinate: coords.first!, imageURL: nil, isRoutePoint: true)
+                            let endAnn = BirdAnnotation(comName: "End", sciName: nil, coordinate: coords.last!, imageURL: nil, isRoutePoint: true)
+                            list.append(Cluster(members: [startAnn]))
+                            list.append(Cluster(members: [endAnn]))
                     }
                     return list
                 }()
@@ -798,6 +793,12 @@ struct HomeView: View {
                                 self.annotations[i].imageURL = url
                             }
                         }
+                        // prefetch image into the map wrapper's cache so annotation view shows immediately
+                        URLSession.shared.dataTask(with: url) { data, _, _ in
+                            if let data = data, let img = UIImage(data: data) {
+                                MKMapViewWrapper.Coordinator.imageCache.setObject(img, forKey: url as NSURL)
+                            }
+                        }.resume()
                     }
 
                     if let sci = ann.sciName, !sci.isEmpty {
