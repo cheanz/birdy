@@ -53,7 +53,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
             func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
                 if annotation is MKUserLocation { return nil }
                 if let bird = annotation as? BirdMKAnnotation {
-                    let id = "bird-")
+                    let id = "bird"
                     var v = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                     if v == nil {
                         v = MKAnnotationView(annotation: annotation, reuseIdentifier: id)
@@ -61,7 +61,8 @@ struct MKMapViewWrapper: UIViewRepresentable {
                         v?.annotation = annotation
                     }
                     if let v = v {
-                        parent.coordinator.configureAnnotationView(v, for: bird)
+                        // call helper on this coordinator
+                        configureAnnotationView(v, for: bird)
                     }
                     return v
                 }
