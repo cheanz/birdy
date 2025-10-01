@@ -21,7 +21,6 @@ final class PurchaseManager: ObservableObject {
     @Published var packages: [Package] = []
     @Published var isLoading: Bool = false
     @Published var isPurchasing: Bool = false
-    @Published var customerInfo: CustomerInfo? = nil
 
     private init() {
         Task { await loadOfferings() }
@@ -40,17 +39,6 @@ final class PurchaseManager: ObservableObject {
         } catch {
             print("PurchaseManager: loadOfferings error:\(error)")
             self.packages = []
-        }
-    }
-
-    /// Refresh and publish the current CustomerInfo
-    func refreshCustomerInfo() async {
-        do {
-            let info = try await Purchases.shared.customerInfo()
-            self.customerInfo = info
-        } catch {
-            print("PurchaseManager: refreshCustomerInfo error: \(error)")
-            self.customerInfo = nil
         }
     }
 
@@ -73,13 +61,5 @@ final class PurchaseManager: ObservableObject {
         return creditsToAdd
 
         return 0
-    }
-
-    /// Attempt to restore previous purchases and refresh customer info.
-    func restorePurchases() async throws {
-        isLoading = true
-        defer { isLoading = false }
-        try await Purchases.shared.restorePurchases()
-        await refreshCustomerInfo()
     }
 }

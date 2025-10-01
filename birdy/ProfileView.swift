@@ -64,50 +64,6 @@ struct ProfileView: View {
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGroupedBackground)))
 
-                // Settings: payment & subscription management
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Settings")
-                        .font(.headline)
-
-                    NavigationLink(destination: PaymentMethodsView()) {
-                        HStack {
-                            Text("Payment Methods")
-                            Spacer()
-                            Image(systemName: "creditcard")
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 6)
-                    }
-
-                    NavigationLink(destination: SubscriptionsView()) {
-                        HStack {
-                            Text("Subscriptions")
-                            Spacer()
-                            Image(systemName: "doc.text.magnifyingglass")
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 6)
-                    }
-
-                    Button(action: {
-                        Task {
-                            do {
-                                try await PurchaseManager.shared.restorePurchases()
-                            } catch {
-                                // best-effort: show an alert via setting state (kept simple)
-                            }
-                        }
-                    }) {
-                        HStack {
-                            Text("Restore Purchases")
-                            Spacer()
-                        }
-                    }
-                    .padding(.vertical, 6)
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGroupedBackground)))
-
                 Spacer()
             }
             .padding()
