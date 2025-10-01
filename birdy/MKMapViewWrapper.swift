@@ -53,18 +53,33 @@ struct MKMapViewWrapper: UIViewRepresentable {
             func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
                 if annotation is MKUserLocation { return nil }
                 if let bird = annotation as? BirdMKAnnotation {
+                    // Route points use a small flag view
+                    if bird.isRoutePoint {
+                        let id = "route-flag"
+                        var v = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                        if v == nil {
+                            v = MKAnnotationView(annotation: annotation, reuseIdentifier: id)
+                        } else {
+                            v?.annotation = annotation
+                        }
+                        if let v = v {
+                            configureAnnotationView(v, for: bird)
+                        }
+                        return v
+                    }
+
+                    // Bird annotation: use a custom view that shows image + label underneath
                     let id = "bird"
-                    var v = mapView.dequeueReusableAnnotationView(withIdentifier: id)
-                    if v == nil {
-                        v = MKAnnotationView(annotation: annotation, reuseIdentifier: id)
+                    var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? BirdAnnotationView
+                    if view == nil {
+                        view = BirdAnnotationView(annotation: annotation, reuseIdentifier: id)
                     } else {
-                        v?.annotation = annotation
+                        view?.annotation = annotation
                     }
-                    if let v = v {
-                        // call helper on this coordinator
-                        configureAnnotationView(v, for: bird)
+                    if let view = view {
+                        view.configure(with: bird)
                     }
-                    return v
+                    return view
                 }
                 return nil
             }
@@ -152,5 +167,61 @@ extension MKMapViewWrapper.Coordinator {
             view.frame.size = CGSize(width: 32, height: 32)
         }
         view.canShowCallout = true
+    }
+}
+
+// Custom MKAnnotationView that shows a circular image and a label below it.
+class BirdAnnotationView: MKAnnotationView {
+    private let imageView = UIImageView()
+    private let label = UILabel()
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setup()
+    }
+
+    private func setup() {
+        imageView.contentMode = .scaleAspectFill
+        imageView.layer.cornerRadius = 24
+        imageView.clipsToBounds = true
+        imageView.layer.borderColor = UIColor.white.cgColor
+        imageView.layer.borderWidth = 2
+        imageView.frame = CGRect(x: 0, y: 0, width: 48, height: 48)
+        addSubview(imageView)
+
+        label.font = UIFont.systemFont(ofSize: 11)
+        label.textAlignment = .center
+        label.textColor = .label
+        label.frame = CGRect(x: -40, y: 50, width: 128, height: 16)
+        addSubview(label)
+
+        // adjust frame to include label area
+        self.frame = CGRect(x: 0, y: 0, width: 48, height: 68)
+        centerOffset = CGPoint(x: 0, y: -34)
+    }
+
+    func configure(with bird: BirdMKAnnotation) {
+        label.text = bird.title
+        if let url = bird.imageURL {
+            if let cached = MKMapViewWrapper.Coordinator.imageCache.object(forKey: url as NSURL) {
+                imageView.image = cached
+            } else {
+                imageView.image = UIImage(systemName: "photo")
+                URLSession.shared.dataTask(with: url) { data, _, _ in
+                    guard let data = data, let img = UIImage(data: data) else { return }
+                    DispatchQueue.main.async {
+                        MKMapViewWrapper.Coordinator.imageCache.setObject(img, forKey: url as NSURL)
+                        self.imageView.image = img
+                    }
+                }.resume()
+            }
+        } else {
+            imageView.image = UIImage(systemName: "bird")
+        }
     }
 }
