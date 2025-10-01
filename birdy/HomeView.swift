@@ -437,102 +437,26 @@ struct HomeView: View {
                     return list
                 }()
 
-                Map(coordinateRegion: $region, showsUserLocation: true, annotationItems: displayAnnotations) { cluster in
-                    MapAnnotation(coordinate: cluster.coordinate) {
-                        VStack {
-                            if cluster.members.count == 1 {
-                                let item = cluster.members[0]
-                                if let url = item.imageURL {
-                                    AsyncImage(url: url) { phase in
-                                        switch phase {
-                                        case .empty:
-                                            ProgressView()
-                                                .frame(width: 48, height: 48)
-                                        case .success(let image):
-                                            let key = (item.sciName ?? item.comName ?? "").lowercased()
-                                            let freq = speciesFrequency[key] ?? 0
-                                            image
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: 48, height: 48)
-                                                .clipShape(Circle())
-                                                .overlay(Circle().stroke(freq <= 1 ? Color.yellow : Color.white, lineWidth: freq <= 1 ? 3 : 2))
-                                                .shadow(radius: 2)
-                                        case .failure:
-                                            Circle()
-                                                .fill(Color.green)
-                                                .frame(width: 20, height: 20)
-                                        @unknown default:
-                                            EmptyView()
-                                        }
-                                    }
-                                } else {
-                                    Circle()
-                                        .fill(Color.green)
-                                        .frame(width: 20, height: 20)
-                                }
-
-                                Text(item.displayName)
-                                    .font(.caption2)
-                                    .fixedSize()
-                                    .padding(.top, 2)
-                            } else {
-                                // cluster: pick up to 5 species ranked by frequency within the cluster
-                                let speciesGroups = clusterSpeciesCounts(cluster.members)
-                                let top = Array(speciesGroups.prefix(5))
-                                // sizes for icons by rank (largest to smallest)
-                                let sizes: [CGFloat] = [44, 36, 28, 22, 16]
-                                let usedSizes = Array(sizes.prefix(top.count))
-                                let offsets = packedPositions(forSizes: usedSizes, padding: 6)
-
-                                let entries = top
-                                let view = ClusterPackedView(entries: entries, sizes: usedSizes, offsets: offsets)
-                                view
-                            }
-                        }
-                        .onTapGesture {
-                            if cluster.members.count > 1 {
-                                withAnimation {
-                                    region.center = cluster.coordinate
-                                    region.span = MKCoordinateSpan(latitudeDelta: max(region.span.latitudeDelta / 2, 0.001), longitudeDelta: max(region.span.longitudeDelta / 2, 0.001))
-                                }
-                            } else {
-                                // future: show detail sheet for single bird
-                            }
-                        }
+                // Build MKAnnotation objects for clusters and route dots
+                let mkAnnotations: [MKPointAnnotation] = displayAnnotations.flatMap { cluster in
+                    cluster.members.map { m in
+                        let a = MKPointAnnotation()
+                        a.coordinate = m.coordinate
+                        a.title = m.displayName
+                        return a
                     }
                 }
-                // If we have an active route, also show its endpoints and overlay.
+
+                // Build polyline overlay if route coords exist
+                var overlays: [MKOverlay] = []
                 if let coords = currentRouteCoords, coords.count >= 2 {
-                    // MapOverlay / polyline rendering (iOS 16+ Map supports MapPolyline) - if not available,
-                    // we'll also render small point annotations as a fallback.
-#if canImport(MapKit)
-                    // Use MapAnnotation for endpoints
-                    MapAnnotation(coordinate: coords.first!) {
-                        VStack {
-                            Image(systemName: "circle.fill")
-                                .foregroundColor(.green)
-                                .font(.caption)
-                        }
-                    }
-                    MapAnnotation(coordinate: coords.last!) {
-                        VStack {
-                            Image(systemName: "flag.fill")
-                                .foregroundColor(.red)
-                                .font(.caption)
-                        }
-                    }
-#endif
-                    // Draw polyline by converting coordinates into an MKPolyline overlay rendered as many small MapAnnotations
-                    // (SwiftUI Map lacks a direct polyline overlay API pre-iOS 16 in some versions, so this is a safe fallback)
-                    ForEach(Array(coords.enumerated()), id: \ .offset) { _, c in
-                        MapAnnotation(coordinate: c) {
-                            Circle()
-                                .fill(Color.blue.opacity(0.9))
-                                .frame(width: 6, height: 6)
-                        }
-                    }
+                    let pts = coords.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                    let poly = MKPolyline(coordinates: pts, count: pts.count)
+                    overlays.append(poly)
                 }
+
+                MKMapViewWrapper(region: $region, annotations: mkAnnotations, overlays: overlays)
+                // route rendering is handled by building `displayAnnotations` passed into the Map above
 
                 // decorative top border (tiled pixel-art) roughly the thickness of the Dynamic Island
                 let dynamicIslandHeight: CGFloat = 54
