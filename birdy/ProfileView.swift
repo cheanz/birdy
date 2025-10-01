@@ -55,13 +55,13 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(purchases.packages, id: \ .identifier) { pkg in
-                            let pid = pkg.product.productIdentifier
-                            let creditAmount = purchases.productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: pkg.product.price as Decimal).doubleValue * 10.0))
+                            let pid = pkg.storeProduct.productIdentifier
+                            let creditAmount = purchases.productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: pkg.storeProduct.price as Decimal).doubleValue * 10.0))
                             HStack {
                                 VStack(alignment: .leading) {
                                     Text("\(creditAmount) credits")
                                         .bold()
-                                    Text(pkg.product.localizedTitle)
+                                    Text(pkg.storeProduct.localizedTitle)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -86,8 +86,8 @@ struct ProfileView: View {
                                         isProcessing = false
                                     }
                                 }) {
-                                    Text(pkg.product.priceLocale.currencySymbol ?? "")
-                                        + Text(String(format: "%.2f", NSDecimalNumber(decimal: pkg.product.price as Decimal).doubleValue))
+                                    Text(pkg.storeProduct.priceLocale.currencySymbol ?? "")
+                                        + Text(String(format: "%.2f", NSDecimalNumber(decimal: pkg.storeProduct.price as Decimal).doubleValue))
                                 }
                                 .disabled(isProcessing || purchases.isPurchasing)
                             }

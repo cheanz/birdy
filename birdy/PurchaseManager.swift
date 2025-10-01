@@ -46,8 +46,8 @@ final class PurchaseManager: ObservableObject {
         // on successful purchase, credit the local counter in UserDefaults and return amount
         // `result.customerInfo` is non-optional when purchase completes successfully, so
         // treat this as confirmation and credit the mapped amount.
-        let pid = package.product.productIdentifier
-        let creditsToAdd = productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: package.product.price as Decimal).doubleValue * 10.0))
+    let pid = package.storeProduct.productIdentifier
+    let creditsToAdd = productCredits[pid] ?? Int(round(NSDecimalNumber(decimal: package.storeProduct.price as Decimal).doubleValue * 10.0))
         let key = "birdy_local_credits"
         let current = UserDefaults.standard.integer(forKey: key)
         UserDefaults.standard.set(current + creditsToAdd, forKey: key)
