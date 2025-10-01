@@ -37,5 +37,5 @@ struct MusicPlayerView: View {
 }
 
 #Preview {
-    MusicPlayerView(audio: AudioManager(filename: "background", fileExtension: "m4a", autoplay: false, pauseBetweenLoops: 2.0))
+    MusicPlayerView(audio: AudioManager(filename: "background", fileExtension: "wav", autoplay: false, pauseBetweenLoops: 2.0))
 }
