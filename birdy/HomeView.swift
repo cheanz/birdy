@@ -82,34 +82,7 @@ struct BirdAnnotation: Identifiable {
     }
 }
 
-// Codable wrapper for storing coordinates in UserDefaults
-private struct CodableCoordinate: Codable {
-    let lat: Double
-    let lon: Double
-
-    init(_ c: CLLocationCoordinate2D) {
-        lat = c.latitude
-        lon = c.longitude
-    }
-
-    var clLocationCoordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
-}
-
-private struct SavedRoute: Codable, Identifiable {
-    let id: UUID
-    let name: String
-    let coords: [CodableCoordinate]
-    let date: Date
-
-    init(name: String, coords: [CLLocationCoordinate2D]) {
-        self.id = UUID()
-        self.name = name
-        self.coords = coords.map { CodableCoordinate($0) }
-        self.date = Date()
-    }
-
-    var coordinates: [CLLocationCoordinate2D] { coords.map { $0.clLocationCoordinate } }
-}
+// Use shared route models in RouteModels.swift
 
 struct Cluster: Identifiable {
     let id = UUID()
@@ -447,7 +420,24 @@ struct HomeView: View {
                     }
                 }()
 
-                Map(coordinateRegion: $region, showsUserLocation: true, annotationItems: clusters) { cluster in
+                // Build the annotations list by combining clusters and route points so all MapAnnotations are inside Map's closure.
+                let displayAnnotations: [Cluster] = {
+                    var list = clusters
+                    if let coords = currentRouteCoords, coords.count >= 2 {
+                        let startAnn = BirdAnnotation(comName: "Start", sciName: nil, coordinate: coords.first!, imageURL: nil, isRoutePoint: true)
+                        let endAnn = BirdAnnotation(comName: "End", sciName: nil, coordinate: coords.last!, imageURL: nil, isRoutePoint: true)
+                        list.append(Cluster(members: [startAnn]))
+                        list.append(Cluster(members: [endAnn]))
+                        // polyline dots
+                        for c in coords {
+                            let dot = BirdAnnotation(comName: nil, sciName: nil, coordinate: c, imageURL: nil, isRoutePoint: true)
+                            list.append(Cluster(members: [dot]))
+                        }
+                    }
+                    return list
+                }()
+
+                Map(coordinateRegion: $region, showsUserLocation: true, annotationItems: displayAnnotations) { cluster in
                     MapAnnotation(coordinate: cluster.coordinate) {
                         VStack {
                             if cluster.members.count == 1 {
