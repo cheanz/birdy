@@ -128,8 +128,7 @@ struct ProfileView: View {
                     isProcessing = false
                 }
             }) {
-                Text(pkg.storeProduct.priceLocale.currencySymbol ?? "")
-                    + Text(String(format: "%.2f", priceValue))
+                Text(pkg.storeProduct.localizedPriceString)
             }
             .disabled(isProcessing || purchases.isPurchasing)
         }
