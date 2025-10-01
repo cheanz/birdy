@@ -1,140 +1,61 @@
 import SwiftUI
 import RevenueCat
 
-struct ProfileView: View {
-    // simple local credit counter persisted in UserDefaults
-    @AppStorage("birdy_local_credits") private var credits: Int = 0
-    @StateObject private var purchases = PurchaseManager.shared
-    @State private var isProcessing: Bool = false
-    @State private var alertMessage: String?
-    @State private var showToast: Bool = false
-    @State private var toastText: String = ""
+struct StoreView: View {
+    @State private var offerings: Offerings?
+    @State private var credits: Int = UserDefaults.standard.integer(forKey: "credits")
+    @State private var message: String?
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
-                Image(systemName: "person.crop.circle.fill")
-                    .resizable()
-                    .frame(width: 100, height: 100)
-                    .foregroundStyle(.tint)
+        VStack(spacing: 20) {
+            Text("GoBirdy Store")
+                .font(.title.bold())
 
-                Text("Your Name")
-                    .font(.title2)
+            Text("Credits: \(credits)")
+                .font(.headline)
 
-                Text("Member since 2025")
-                    .foregroundColor(.secondary)
+            if let package = offerings?.current?.package(identifier: "10credits") {
+                VStack(spacing: 10) {
+                    Text("Buy 10 Credits")
+                    Text(package.storeProduct.localizedPriceString)
+                        .font(.title2.bold())
 
-                Divider()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Credits")
-                        .font(.headline)
-
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text("\(credits)")
-                            .font(.largeTitle)
-                            .bold()
-                        Spacer()
-                    }
-                    Text("Credits are stored locally on this device.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGroupedBackground)))
-
-                // Purchases section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Buy Credits")
-                        .font(.headline)
-
-                    if purchases.isLoading {
-                        Text("Loading…")
-                            .foregroundColor(.secondary)
-                    } else if purchases.packages.isEmpty {
-                        Text("No offerings available")
-                            .foregroundColor(.secondary)
-                    } else {
-                        ForEach(purchases.packages, id: \.identifier) { pkg in
-                            packageRow(pkg)
-                                .padding(.vertical, 6)
-                        }
-                    }
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGroupedBackground)))
-
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("Profile")
-            .onAppear {
-                Task { await purchases.loadOfferings() }
-            }
-            .overlay(
-                Group {
-                    if showToast {
-                        Text(toastText)
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.8)))
-                            .foregroundColor(.white)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                            .zIndex(1)
-                    }
-                }
-                , alignment: .top
-            )
-            .alert("Purchase", isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } })) {
-                Button("OK", role: .cancel) { alertMessage = nil }
-            } message: {
-                Text(alertMessage ?? "")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func packageRow(_ pkg: RevenueCat.Package) -> some View {
-        // compute commonly used values in small, typed steps to help the compiler
-        let pid = pkg.storeProduct.productIdentifier
-        let priceValue = NSDecimalNumber(decimal: pkg.storeProduct.price as Decimal).doubleValue
-    let creditAmount = purchases.productCredits[pid] ?? Int(round(priceValue * Double(purchases.creditsPerDollar)))
-
-        HStack {
-            VStack(alignment: .leading) {
-                Text("\(creditAmount) credits")
-                    .bold()
-                Text(pkg.storeProduct.localizedTitle)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            Spacer()
-            Button(action: {
-                Task {
-                    isProcessing = true
-                    do {
-                        let added = try await purchases.purchase(pkg)
-                        if added > 0 {
-                            toastText = "Added \(added) credits"
-                            showToast = true
-                            // auto-hide after 2 seconds
-                            Task {
-                                try await Task.sleep(nanoseconds: 2_000_000_000)
-                                await MainActor.run { showToast = false }
+                    Button("Buy Now") {
+                        Task {
+                            do {
+                                let result = try await Purchases.shared.purchase(package: package)
+                                if result.customerInfo.entitlements.active.isEmpty {
+                                    // Consumable: just grant credits
+                                    credits += 10
+                                    UserDefaults.standard.set(credits, forKey: "credits")
+                                    message = "Added 10 credits!"
+                                }
+                            } catch {
+                                message = "Purchase failed: \(error.localizedDescription)"
                             }
                         }
-                    } catch {
-                        alertMessage = error.localizedDescription
                     }
-                    isProcessing = false
+                    .buttonStyle(.borderedProminent)
                 }
-            }) {
-                Text(pkg.storeProduct.localizedPriceString)
+            } else {
+                Text("Loading products…")
             }
-            .disabled(isProcessing || purchases.isPurchasing)
+
+            if let msg = message {
+                Text(msg)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .task {
+            do {
+                offerings = try await Purchases.shared.offerings()
+            } catch {
+                message = "Failed to load offerings: \(error.localizedDescription)"
+            }
         }
     }
-}
-
-#Preview {
-    ProfileView()
 }
